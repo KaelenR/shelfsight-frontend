@@ -45,12 +45,12 @@
 
 | Name | Details |
 |------|---------|
-| **Name 4** | **Tasks completed:** |
-| | • |
+| **Kaelen Raible** | **Tasks completed:** |
+| | • Created Backend and 1st API Call |
 | **Time Spent** | **Planned tasks for next week:** |
-| | • |
+| | • 7 hours|
 | | **Any issues or challenges:** |
-| | • |
+| | • Deciding on local hosting for now and making DB online later|
 
 ---
 
