@@ -120,9 +120,6 @@ AI/Data Layer must NOT:
 
 Manual review is mandatory.
 
----
-
-````markdown
 # 4) System Architecture Diagram
 
 ```mermaid
@@ -143,9 +140,9 @@ flowchart LR
 
   W -->|Write results| DB
   BE -->|Logs| CW[(CloudWatch)]
+```
 
 # 5) Data Model (Minimal, AI-Friendly Schema)
-
 - 5.1 Core Entities
 
   - User
