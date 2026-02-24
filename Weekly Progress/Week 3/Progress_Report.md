@@ -122,6 +122,7 @@ Manual review is mandatory.
 
 ---
 
+````markdown
 # 4) System Architecture Diagram
 
 ```mermaid
