@@ -33,10 +33,11 @@
 
 | Name | Details |
 |------|---------|
-| **Name 3** | **Tasks completed:** |
-| | • |
+| **Chimezie Nnawuihe** | **Tasks completed:** |
+| | • Setup github and jira nfrastructure|
+| | • Worked on the 2D library map|
 | **Time Spent** | **Planned tasks for next week:** |
-| | • |
+| | • 4 hours|
 | | **Any issues or challenges:** |
 | | • |
 
