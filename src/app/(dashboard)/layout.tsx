@@ -15,6 +15,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth } from "@/components/auth-provider";
 
 export default function DashboardLayout({
   children,
@@ -31,6 +33,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navigation = [
@@ -43,7 +46,23 @@ export default function DashboardLayout({
     { name: "Reports", path: "/reports", icon: BarChart3 },
   ];
 
-  const handleLogout = () => {
+  // Show spinner while auth state is loading
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  // Redirect unauthenticated users to login
+  if (!isAuthenticated) {
+    router.replace("/");
+    return null;
+  }
+
+  const handleLogout = async () => {
+    await logout();
     router.push("/");
   };
 
@@ -65,7 +84,14 @@ export default function DashboardLayout({
             {!isCollapsed && (
               <div>
                 <h1 className="font-semibold text-lg">ShelfSight</h1>
-                <p className="text-xs text-gray-500">Admin Portal</p>
+                <p className="text-xs text-gray-500">
+                  {user?.name ?? "Admin Portal"}
+                  {user?.role && (
+                    <span className="ml-1 text-indigo-600">
+                      · {user.role.charAt(0) + user.role.slice(1).toLowerCase()}
+                    </span>
+                  )}
+                </p>
               </div>
             )}
           </div>
