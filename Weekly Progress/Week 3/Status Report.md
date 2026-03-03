@@ -57,16 +57,15 @@
 | Name | Details |
 |------|---------|
 | **Syed Hasan** | **Tasks completed:** |
-| | • Conducted sprint planning session and broke down Week 4 feature implementation tasks
-• Drafted initial AI agentic development specification outlining OCR agent, metadata enrichment agent, Dewey classification logic, and advisory recommendation agent
-• Formalized authentication architecture boundaries and RBAC enforcement model
-• Reviewed backend structure for separation of concerns (routes, controllers, services, middleware) |
+| | • Conducted sprint planning session and helped break down Week 4 development tasks into actionable backend and frontend items |
+| | • Drafted an initial AI agentic development outline covering OCR processing, metadata enrichment, Dewey classification assistance, and recommendation support |
+| | • Reviewed and refined authentication architecture boundaries including JWT handling and RBAC middleware structure |
+| | • Reviewed backend project organization to ensure clear separation of concerns across routes, controllers, services, and middleware layers |
 | **Time Spent:** 12 hours | **Planned tasks for next week:** |
-| | • Implement additional backend API endpoints and route validation
-• Assist with connecting frontend components to backend APIs |
+| | • Implement additional backend API endpoints and improve request validation |
+| | • Assist with connecting frontend components to backend APIs and testing integration |
 | | **Any issues or challenges:** |
-| | • Aligning AI architecture with current MVP scope while avoiding over-engineering required narrowing the initial agent design |
-
+| | • Ensuring the AI architecture remained aligned with the MVP scope while avoiding unnecessary complexity required narrowing the initial design |
 ---
 
 **Total Time Spent: 23 hours**
