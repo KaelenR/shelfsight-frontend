@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState, useCallback, useRef, useEffect } from "react";
-import { Handle, Position, NodeResizer, type NodeProps } from "@xyflow/react";
+import { NodeResizer, type NodeProps } from "@xyflow/react";
 import { Badge } from "@/components/ui/badge";
 import {
   ContextMenu,
@@ -126,6 +126,8 @@ function ShelfNodeComponent({ id, data, selected }: NodeProps & { data: ShelfNod
             height: "100%",
             borderTopWidth: 3,
             borderTopColor: data.color,
+            transform: data.rotation ? `rotate(${data.rotation}deg)` : undefined,
+            transformOrigin: "center center",
           }}
         >
           {/* NodeResizer — visible only when selected */}
@@ -136,68 +138,8 @@ function ShelfNodeComponent({ id, data, selected }: NodeProps & { data: ShelfNod
             lineClassName="!border-indigo-400"
             handleClassName="!h-2 !w-2 !rounded-sm !border-2 !border-indigo-400 !bg-background"
           />
-          {/* Connection handles — 8 total (4 sides + 4 corners), hidden by default */}
-          <Handle
-            id="top"
-            type="source"
-            position={Position.Top}
-            className="!h-1.5 !w-1.5 !rounded-full !border !border-indigo-400 !bg-background !opacity-0 transition-opacity group-hover:!opacity-100"
-          />
-          <Handle
-            id="top-right"
-            type="source"
-            position={Position.Top}
-            style={{ left: "85%" }}
-            className="!h-1.5 !w-1.5 !rounded-full !border !border-indigo-400 !bg-background !opacity-0 transition-opacity group-hover:!opacity-100"
-          />
-          <Handle
-            id="right"
-            type="source"
-            position={Position.Right}
-            className="!h-1.5 !w-1.5 !rounded-full !border !border-indigo-400 !bg-background !opacity-0 transition-opacity group-hover:!opacity-100"
-          />
-          <Handle
-            id="bottom-right"
-            type="source"
-            position={Position.Bottom}
-            style={{ left: "85%" }}
-            className="!h-1.5 !w-1.5 !rounded-full !border !border-indigo-400 !bg-background !opacity-0 transition-opacity group-hover:!opacity-100"
-          />
-          <Handle
-            id="bottom"
-            type="source"
-            position={Position.Bottom}
-            className="!h-1.5 !w-1.5 !rounded-full !border !border-indigo-400 !bg-background !opacity-0 transition-opacity group-hover:!opacity-100"
-          />
-          <Handle
-            id="bottom-left"
-            type="source"
-            position={Position.Bottom}
-            style={{ left: "15%" }}
-            className="!h-1.5 !w-1.5 !rounded-full !border !border-indigo-400 !bg-background !opacity-0 transition-opacity group-hover:!opacity-100"
-          />
-          <Handle
-            id="left"
-            type="source"
-            position={Position.Left}
-            className="!h-1.5 !w-1.5 !rounded-full !border !border-indigo-400 !bg-background !opacity-0 transition-opacity group-hover:!opacity-100"
-          />
-          <Handle
-            id="top-left"
-            type="source"
-            position={Position.Top}
-            style={{ left: "15%" }}
-            className="!h-1.5 !w-1.5 !rounded-full !border !border-indigo-400 !bg-background !opacity-0 transition-opacity group-hover:!opacity-100"
-          />
-
-          {/* Node content — rotated via CSS */}
-          <div
-            className="flex h-full flex-col justify-between p-1.5 overflow-hidden"
-            style={{
-              transform: data.rotation ? `rotate(${data.rotation}deg)` : undefined,
-              transformOrigin: "center center",
-            }}
-          >
+          {/* Node content */}
+          <div className="flex h-full flex-col justify-between p-1.5 overflow-hidden">
             {/* Header row: icon + name + category */}
             <div className="flex items-start gap-1.5">
               <div

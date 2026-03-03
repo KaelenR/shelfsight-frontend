@@ -175,7 +175,7 @@ export function CanvasToolbar({
             <AlertDialogHeader>
               <AlertDialogTitle>Clear Canvas</AlertDialogTitle>
               <AlertDialogDescription>
-                This will remove all shelf nodes and connections from the canvas.
+                This will remove all shelf nodes from the canvas.
                 This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>

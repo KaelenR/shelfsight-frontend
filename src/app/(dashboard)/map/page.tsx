@@ -5,9 +5,6 @@ import {
   ReactFlowProvider,
   useReactFlow,
   useNodesState,
-  useEdgesState,
-  addEdge,
-  type Connection,
 } from "@xyflow/react";
 import {
   DndContext,
@@ -26,22 +23,18 @@ import {
   MapCallbacksContext,
   type MapCallbacks,
 } from "@/components/map/MapCallbacksContext";
-import {
-  INITIAL_NODES,
-  INITIAL_EDGES,
-} from "@/components/map/data";
+import { INITIAL_NODES } from "@/components/map/data";
 import type { ShelfFlowNode, ShelfNodeData, ShelfTemplate } from "@/components/map/types";
 
 function MapPageContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [showMinimap, setShowMinimap] = useState(true);
   const [paletteOpen, setPaletteOpen] = useState(true);
 
   const { pushSnapshot, undo, redo, canUndo, canRedo, isProgrammatic } =
-    useMapHistory(INITIAL_NODES, INITIAL_EDGES);
+    useMapHistory(INITIAL_NODES);
   const reactFlowInstance = useReactFlow();
   const nodeIdCounter = useRef(INITIAL_NODES.length + 1);
 
@@ -74,22 +67,18 @@ function MapPageContent() {
   );
 
   const commitChange = useCallback(() => {
-    pushSnapshot(nodes, edges);
-  }, [nodes, edges, pushSnapshot]);
+    pushSnapshot(nodes);
+  }, [nodes, pushSnapshot]);
 
   // --- Node actions ---
   const deleteNode = useCallback(
     (nodeId: string) => {
       const nextNodes = nodes.filter((n) => n.id !== nodeId);
-      const nextEdges = edges.filter(
-        (e) => e.source !== nodeId && e.target !== nodeId
-      );
       setNodes(nextNodes);
-      setEdges(nextEdges);
       if (selectedNodeId === nodeId) setSelectedNodeId(null);
-      pushSnapshot(nextNodes, nextEdges);
+      pushSnapshot(nextNodes);
     },
-    [nodes, edges, selectedNodeId, setNodes, setEdges, pushSnapshot]
+    [nodes, selectedNodeId, setNodes, pushSnapshot]
   );
 
   const duplicateNode = useCallback(
@@ -114,24 +103,15 @@ function MapPageContent() {
       const nextNodes = [...nodes, newNode];
       setNodes(nextNodes);
       setSelectedNodeId(newId);
-      pushSnapshot(nextNodes, edges);
+      pushSnapshot(nextNodes);
       toast.success("Shelf duplicated");
     },
-    [nodes, edges, setNodes, pushSnapshot]
+    [nodes, setNodes, pushSnapshot]
   );
 
   const selectNode = useCallback((nodeId: string | null) => {
     setSelectedNodeId(nodeId);
   }, []);
-
-  const deleteEdge = useCallback(
-    (edgeId: string) => {
-      const nextEdges = edges.filter((e) => e.id !== edgeId);
-      setEdges(nextEdges);
-      pushSnapshot(nodes, nextEdges);
-    },
-    [nodes, edges, setEdges, pushSnapshot]
-  );
 
   // --- Callbacks context value ---
   const callbacks: MapCallbacks = useMemo(
@@ -140,18 +120,9 @@ function MapPageContent() {
       onDeleteNode: deleteNode,
       onDuplicateNode: duplicateNode,
       onSelectNode: selectNode,
-      onDeleteEdge: deleteEdge,
       onCommitChange: commitChange,
     }),
-    [updateNodeData, deleteNode, duplicateNode, selectNode, deleteEdge, commitChange]
-  );
-
-  // --- Edge connection ---
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      setEdges((prev) => addEdge({ ...connection, type: "labeled", data: { label: "Adjacent" } }, prev));
-    },
-    [setEdges]
+    [updateNodeData, deleteNode, duplicateNode, selectNode, commitChange]
   );
 
   // --- DnD: palette → canvas ---
@@ -187,10 +158,10 @@ function MapPageContent() {
       const nextNodes = [...nodes, newNode];
       setNodes(nextNodes);
       setSelectedNodeId(newId);
-      pushSnapshot(nextNodes, edges);
+      pushSnapshot(nextNodes);
       toast.success(`Added ${template.label}`);
     },
-    [reactFlowInstance, nodes, edges, setNodes, pushSnapshot]
+    [reactFlowInstance, nodes, setNodes, pushSnapshot]
   );
 
   // --- Keyboard shortcuts ---
@@ -205,7 +176,6 @@ function MapPageContent() {
         if (snapshot) {
           isProgrammatic.current = true;
           setNodes(snapshot.nodes);
-          setEdges(snapshot.edges);
           isProgrammatic.current = false;
         }
       }
@@ -217,7 +187,7 @@ function MapPageContent() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo, setNodes, setEdges, isProgrammatic, selectedNodeId, deleteNode]);
+  }, [undo, redo, setNodes, isProgrammatic, selectedNodeId, deleteNode]);
 
   // --- Toolbar handlers ---
   const handleUndo = useCallback(() => {
@@ -225,34 +195,31 @@ function MapPageContent() {
     if (snapshot) {
       isProgrammatic.current = true;
       setNodes(snapshot.nodes);
-      setEdges(snapshot.edges);
       isProgrammatic.current = false;
     }
-  }, [undo, setNodes, setEdges, isProgrammatic]);
+  }, [undo, setNodes, isProgrammatic]);
 
   const handleRedo = useCallback(() => {
     const snapshot = redo();
     if (snapshot) {
       isProgrammatic.current = true;
       setNodes(snapshot.nodes);
-      setEdges(snapshot.edges);
       isProgrammatic.current = false;
     }
-  }, [redo, setNodes, setEdges, isProgrammatic]);
+  }, [redo, setNodes, isProgrammatic]);
 
   const handleSave = useCallback(() => {
-    const layout = { nodes, edges };
+    const layout = { nodes };
     console.log("Saved layout:", JSON.stringify(layout, null, 2));
     toast.success("Layout saved to console");
-  }, [nodes, edges]);
+  }, [nodes]);
 
   const handleClear = useCallback(() => {
-    pushSnapshot(nodes, edges);
+    pushSnapshot(nodes);
     setNodes([]);
-    setEdges([]);
     setSelectedNodeId(null);
     toast.success("Canvas cleared");
-  }, [nodes, edges, setNodes, setEdges, pushSnapshot]);
+  }, [nodes, setNodes, pushSnapshot]);
 
   const handleExportImage = useCallback(async () => {
     const viewport = document.querySelector(
@@ -276,7 +243,7 @@ function MapPageContent() {
       toast.success("Exported canvas as PNG");
     } catch {
       // Fallback: export as JSON download
-      const layout = JSON.stringify({ nodes, edges }, null, 2);
+      const layout = JSON.stringify({ nodes }, null, 2);
       const blob = new Blob([layout], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -286,7 +253,7 @@ function MapPageContent() {
       URL.revokeObjectURL(url);
       toast.success("Exported layout as JSON (install html-to-image for PNG export)");
     }
-  }, [nodes, edges]);
+  }, [nodes]);
 
   // Track node drag end for history
   const wrappedOnNodesChange: typeof onNodesChange = useCallback(
@@ -299,11 +266,11 @@ function MapPageContent() {
       if (hasDragStop) {
         // Defer so React Flow state is flushed before snapshot
         requestAnimationFrame(() => {
-          pushSnapshot(nodes, edges);
+          pushSnapshot(nodes);
         });
       }
     },
-    [onNodesChange, nodes, edges, pushSnapshot]
+    [onNodesChange, nodes, pushSnapshot]
   );
 
   return (
@@ -340,10 +307,7 @@ function MapPageContent() {
             <div className="flex-1">
               <MapCanvas
                 nodes={nodes}
-                edges={edges}
                 onNodesChange={wrappedOnNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
                 onNodeClick={selectNode}
                 snapToGrid={snapToGrid}
                 showMinimap={showMinimap}
@@ -352,10 +316,7 @@ function MapPageContent() {
 
             <ShelfSettingsPanel
               node={selectedNode}
-              nodes={nodes}
-              edges={edges}
               onUpdateNodeData={updateNodeData}
-              onDeleteEdge={deleteEdge}
               onClose={() => setSelectedNodeId(null)}
             />
           </div>

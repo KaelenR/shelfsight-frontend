@@ -1,4 +1,4 @@
-import type { Node, Edge } from "@xyflow/react";
+import type { Node } from "@xyflow/react";
 
 // Shelf template types available in the palette
 export type ShelfType =
@@ -48,15 +48,6 @@ export interface ShelfNodeData {
 // Typed React Flow node for shelves
 export type ShelfFlowNode = Node<ShelfNodeData, "shelf">;
 
-// Edge data for labeled connections
-export interface ShelfEdgeData {
-  [key: string]: unknown;
-  label: string;
-}
-
-// Typed React Flow edge
-export type ShelfFlowEdge = Edge<ShelfEdgeData>;
-
 // Palette template definition
 export interface ShelfTemplate {
   type: ShelfType;
@@ -69,7 +60,6 @@ export interface ShelfTemplate {
 // History snapshot for undo/redo
 export interface HistorySnapshot {
   nodes: ShelfFlowNode[];
-  edges: ShelfFlowEdge[];
 }
 
 // Book status for shelf visualization

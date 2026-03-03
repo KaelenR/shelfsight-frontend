@@ -39,7 +39,7 @@ function BookSpine({ book, index }: { book: ShelfBookDetail; index: number }) {
             className="flex-shrink-0 rounded-sm border cursor-default select-none"
             style={{
               width: book.spineWidth,
-              height: "100%",
+              height: 60 + (book.spineWidth % 7) * 5,
               backgroundColor: isOut ? "transparent" : book.spineColor,
               borderStyle: isOut ? "dashed" : "solid",
               borderColor: isOut ? "var(--border)" : `${book.spineColor}80`,
@@ -130,7 +130,7 @@ export function ShelfViewer({ open, onOpenChange, data }: ShelfViewerProps) {
                     </div>
 
                     {/* Books row */}
-                    <div className="flex items-end gap-[2px] px-3 py-2 min-h-[80px]">
+                    <div className="flex flex-wrap items-end gap-[2px] px-3 py-2 min-h-[80px]">
                       {tier.books.map((book, bookIdx) => (
                         <BookSpine
                           key={book.id}

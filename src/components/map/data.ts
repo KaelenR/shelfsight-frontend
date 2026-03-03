@@ -1,6 +1,5 @@
 import type {
   ShelfFlowNode,
-  ShelfFlowEdge,
   ShelfTemplate,
   ColorPreset,
 } from "./types";
@@ -210,19 +209,3 @@ export const INITIAL_NODES: ShelfFlowNode[] = [
   },
 ];
 
-export const INITIAL_EDGES: ShelfFlowEdge[] = [
-  {
-    id: "e-1-2",
-    source: "shelf-1",
-    target: "shelf-2",
-    type: "labeled",
-    data: { label: "Adjacent" },
-  },
-  {
-    id: "e-1-3",
-    source: "shelf-1",
-    target: "shelf-3",
-    type: "labeled",
-    data: { label: "Same Section" },
-  },
-];

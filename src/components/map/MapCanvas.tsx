@@ -8,23 +8,16 @@ import {
   MiniMap,
   BackgroundVariant,
   type OnNodesChange,
-  type OnEdgesChange,
-  type OnConnect,
   type NodeTypes,
-  type EdgeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useDroppable } from "@dnd-kit/core";
 import { ShelfNode } from "./ShelfNode";
-import { LabeledEdge } from "./LabeledEdge";
-import type { ShelfFlowNode, ShelfFlowEdge, ShelfNodeData } from "./types";
+import type { ShelfFlowNode, ShelfNodeData } from "./types";
 
 interface MapCanvasProps {
   nodes: ShelfFlowNode[];
-  edges: ShelfFlowEdge[];
   onNodesChange: OnNodesChange<ShelfFlowNode>;
-  onEdgesChange: OnEdgesChange<ShelfFlowEdge>;
-  onConnect: OnConnect;
   onNodeClick: (nodeId: string) => void;
   snapToGrid: boolean;
   showMinimap: boolean;
@@ -32,16 +25,12 @@ interface MapCanvasProps {
 
 export function MapCanvas({
   nodes,
-  edges,
   onNodesChange,
-  onEdgesChange,
-  onConnect,
   onNodeClick,
   snapToGrid,
   showMinimap,
 }: MapCanvasProps) {
   const nodeTypes: NodeTypes = useMemo(() => ({ shelf: ShelfNode }), []);
-  const edgeTypes: EdgeTypes = useMemo(() => ({ labeled: LabeledEdge }), []);
 
   // Make the canvas a drop target for @dnd-kit palette items
   const { setNodeRef } = useDroppable({ id: "react-flow-canvas" });
@@ -50,19 +39,14 @@ export function MapCanvas({
     <div ref={setNodeRef} className="h-full w-full">
       <ReactFlow
         nodes={nodes}
-        edges={edges}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
         nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
         onNodeClick={(_, node) => onNodeClick(node.id)}
         snapToGrid={snapToGrid}
         snapGrid={[20, 20]}
         deleteKeyCode={["Backspace", "Delete"]}
         fitView
         fitViewOptions={{ maxZoom: 1 }}
-        defaultEdgeOptions={{ type: "labeled", data: { label: "Adjacent" } }}
         className="!bg-background"
       >
         <Background

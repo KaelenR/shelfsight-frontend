@@ -16,11 +16,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Trash2, Eye } from "lucide-react";
+import { X, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COLOR_PRESETS } from "./data";
 import { ShelfViewer } from "./ShelfViewer";
-import type { ShelfFlowNode, ShelfFlowEdge, ShelfNodeData, ShelfCategory } from "./types";
+import type { ShelfFlowNode, ShelfNodeData, ShelfCategory } from "./types";
 
 const CATEGORIES: ShelfCategory[] = [
   "Fiction",
@@ -36,19 +36,13 @@ const CATEGORIES: ShelfCategory[] = [
 
 interface ShelfSettingsPanelProps {
   node: ShelfFlowNode | null;
-  nodes: ShelfFlowNode[];
-  edges: ShelfFlowEdge[];
   onUpdateNodeData: (nodeId: string, data: Partial<ShelfNodeData>) => void;
-  onDeleteEdge: (edgeId: string) => void;
   onClose: () => void;
 }
 
 export function ShelfSettingsPanel({
   node,
-  nodes,
-  edges,
   onUpdateNodeData,
-  onDeleteEdge,
   onClose,
 }: ShelfSettingsPanelProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -307,63 +301,6 @@ export function ShelfSettingsPanel({
                   View Shelf
                 </Button>
 
-                <Separator />
-
-                {/* Connections */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Connections</Label>
-                  {(() => {
-                    const connectedEdges = edges.filter(
-                      (e) => e.source === node.id || e.target === node.id
-                    );
-                    if (connectedEdges.length === 0) {
-                      return (
-                        <p className="text-[10px] text-muted-foreground">
-                          No connections
-                        </p>
-                      );
-                    }
-                    return (
-                      <div className="flex flex-col gap-1.5">
-                        {connectedEdges.map((edge) => {
-                          const otherId =
-                            edge.source === node.id
-                              ? edge.target
-                              : edge.source;
-                          const otherNode = nodes.find(
-                            (n) => n.id === otherId
-                          );
-                          const edgeLabel =
-                            (edge.data as { label?: string })?.label ??
-                            "Connected";
-                          return (
-                            <div
-                              key={edge.id}
-                              className="flex items-center justify-between rounded border px-2 py-1"
-                            >
-                              <div className="min-w-0">
-                                <p className="text-[10px] font-medium truncate">
-                                  {otherNode?.data.label ?? otherId}
-                                </p>
-                                <p className="text-[9px] text-muted-foreground">
-                                  {edgeLabel}
-                                </p>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 flex-shrink-0 text-destructive hover:text-destructive"
-                                onClick={() => onDeleteEdge(edge.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </div>
               </div>
             </ScrollArea>
           </div>

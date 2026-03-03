@@ -1,14 +1,11 @@
 import { useCallback, useRef, useState } from "react";
-import type { ShelfFlowNode, ShelfFlowEdge, HistorySnapshot } from "./types";
+import type { ShelfFlowNode, HistorySnapshot } from "./types";
 
 const MAX_HISTORY = 50;
 
-export function useMapHistory(
-  initialNodes: ShelfFlowNode[],
-  initialEdges: ShelfFlowEdge[]
-) {
+export function useMapHistory(initialNodes: ShelfFlowNode[]) {
   const [history, setHistory] = useState<HistorySnapshot[]>([
-    { nodes: initialNodes, edges: initialEdges },
+    { nodes: initialNodes },
   ]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -16,13 +13,13 @@ export function useMapHistory(
   const isProgrammatic = useRef(false);
 
   const pushSnapshot = useCallback(
-    (nodes: ShelfFlowNode[], edges: ShelfFlowEdge[]) => {
+    (nodes: ShelfFlowNode[]) => {
       if (isProgrammatic.current) return;
 
       setHistory((prev) => {
         // Discard any forward history after the current index
         const truncated = prev.slice(0, currentIndex + 1);
-        const next = [...truncated, { nodes, edges }];
+        const next = [...truncated, { nodes }];
         // Cap history length
         if (next.length > MAX_HISTORY) {
           next.shift();

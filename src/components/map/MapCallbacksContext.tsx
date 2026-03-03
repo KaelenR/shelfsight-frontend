@@ -8,7 +8,6 @@ export interface MapCallbacks {
   onDeleteNode: (nodeId: string) => void;
   onDuplicateNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string | null) => void;
-  onDeleteEdge: (edgeId: string) => void;
   onCommitChange: () => void;
 }
 
