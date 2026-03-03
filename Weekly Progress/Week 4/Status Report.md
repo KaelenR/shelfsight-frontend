@@ -50,13 +50,13 @@
 | Name | Details |
 |------|---------|
 | **Chimezie Nnawuihe** | **Tasks completed:** |
-| | • *Worked on documentation update for authentication, wireframes, sprint planning, and AI agentic development* |
-| | • *Alligned current progress to the documentation* |
+| | • Worked on documentation update for authentication, wireframes, sprint planning, and AI agentic development |
+| | • Alligned current progress to the documentation |
 | **Time Spent:** 8-10 hours | **Planned tasks for next week:** |
-| | • *Continue working on the frontend pages* |
-| | • *Continue updating documentation for current progress* |
+| | • Continue working on the frontend pages |
+| | • Continue updating documentation for current progress |
 | | **Any issues or challenges:** |
-| | • *No issues* |
+| | • No issues |
 
 ---
 
