@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -36,15 +36,19 @@ export default function DashboardLayout({
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const navigation = [
-    { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-    { name: "AI Book Ingestion", path: "/ingest", icon: ScanLine },
-    { name: "Library Map", path: "/map", icon: Map },
-    { name: "Catalog", path: "/catalog", icon: Library },
-    { name: "Circulation", path: "/circulation", icon: RefreshCw },
-    { name: "Members", path: "/members", icon: Users },
-    { name: "Reports", path: "/reports", icon: BarChart3 },
+  const allNavigation = [
+    { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "STAFF", "PATRON"] },
+    { name: "AI Book Ingestion", path: "/ingest", icon: ScanLine, roles: ["ADMIN", "STAFF"] },
+    { name: "Library Map", path: "/map", icon: Map, roles: ["ADMIN", "STAFF", "PATRON"] },
+    { name: "Catalog", path: "/catalog", icon: Library, roles: ["ADMIN", "STAFF", "PATRON"] },
+    { name: "Circulation", path: "/circulation", icon: RefreshCw, roles: ["ADMIN", "STAFF"] },
+    { name: "Members", path: "/members", icon: Users, roles: ["ADMIN"] },
+    { name: "Reports", path: "/reports", icon: BarChart3, roles: ["ADMIN"] },
   ];
+
+  const navigation = allNavigation.filter((item) =>
+    item.roles.includes(user?.role ?? "PATRON")
+  );
 
   // Show spinner while auth state is loading
   if (isLoading) {
@@ -56,9 +60,18 @@ export default function DashboardLayout({
   }
 
   // Redirect unauthenticated users to login
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isLoading, isAuthenticated, router]);
+
   if (!isAuthenticated) {
-    router.replace("/");
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    );
   }
 
   const handleLogout = async () => {

@@ -77,3 +77,17 @@
 
 **Summary:**
 *(Update once all members have filled in their sections.)*
+
+---
+
+## Test Login Credentials
+
+The following seeded accounts are available for testing. Each role sees a different dashboard and has different navigation access.
+
+| Role | Email | Password | Dashboard Features |
+|------|-------|----------|--------------------|
+| **Admin** | `admin@shelfsight.com` | `password123` | Full system stats, AI recommendations, quick links to all features (Ingest, Map, Members, Reports). Sees all sidebar items. |
+| **Staff** | `staff@shelfsight.com` | `password123` | Daily task checklist, circulation activity, shift-relevant stats. Sidebar includes Circulation and AI Ingest but not Members or Reports. |
+| **Patron** | `patron@shelfsight.com` | `password123` | Current loans with due dates, personalized book recommendations, reading stats. Sidebar limited to Dashboard, Catalog, and Library Map. |
+
+> **Note:** The backend must be running (`npm run dev` in `shelfsight-backend/`) and the database must be seeded (`npm run db:seed`) for these credentials to work. The backend runs on port 3001 and uses HttpOnly JWT cookies for authentication.

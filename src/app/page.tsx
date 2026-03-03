@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,9 +28,18 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
   // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      router.replace("/dashboard");
+    }
+  }, [isAuthenticated, authLoading, router]);
+
   if (isAuthenticated && !authLoading) {
-    router.replace("/dashboard");
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    );
   }
 
   function validate(): boolean {
