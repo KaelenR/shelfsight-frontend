@@ -87,10 +87,10 @@
 
 ---
 
-**Total Time Spent: __ hours**
+**Total Time Spent: 42 hours**
 
 **Summary:**
-*(Update once all members have filled in their sections.)*
+Week 4 focused on building out core infrastructure across both the frontend and backend. The interactive library map was rebuilt using React Flow with drag-and-drop shelf placement, custom shelf nodes, a settings panel, a book-spine shelf viewer, and features like undo/redo, snap-to-grid, and canvas export. The frontend was also redesigned with more modern branding and UI. Full authentication was implemented end-to-end: the frontend gained a login page with validation, an AuthProvider context, route protection, and role-aware sidebar display, while the backend received JWT-based auth with HttpOnly cookies, bcrypt password hashing, and RBAC middleware. Backend development also delivered the basic book and user CRUD APIs, user role setup (Admin, Staff, Patron), and updated seed data for auth testing. On the planning side, sprint tasks were broken down, an AI agentic development outline was drafted covering OCR, metadata enrichment, and Dewey classification, and the backend project structure was reviewed for clean separation of concerns. No hardcoded secrets remain, and `.env.example` files were created for both repos.
 
 ---
 
