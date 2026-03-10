@@ -9,11 +9,17 @@
 | Name | Details |
 |------|---------|
 | **Mirza Baig** | **Tasks completed:** |
-| | • TBD |
-| **Time Spent:** TBD | **Planned tasks for next week:** |
-| | • TBD |
+| | • Built full-featured catalog page with modular components: CRUD operations, search/filter toolbar, table and grid views, pagination, book detail sheet, and delete confirmation dialog |
+| | • Built full-featured circulation page with modular components: check-out tab, check-in tab with confirmation dialog, active loans table with loan detail sheet, fines tab, transaction history, renew dialog, and overdue alert banner |
+| | • Built full-featured reports page with 5 analytics tabs (Overview, Collection, Circulation, Members, Financial), date range filtering, peak hours heatmap, and CSV export |
+| | • Refactored dashboard into modular role-based views (Admin, Staff, Patron) with KPI cards, circulation charts, collection health stats, AI insights panel, activity feed, and reading analytics |
+| | • Created custom hooks for each page (`useCatalogState`, `useCirculationState`, `useReportsState`, `useDashboardState`) to separate business logic from UI |
+| | • Defined shared TypeScript types for books and circulation models |
+| **Time Spent:** 12 hours | **Planned tasks for next week:** |
+| | • Integrate dashboard components with real backend API endpoints (replace mock data) |
+| | • Add loading skeletons and empty states across all pages |
 | | **Any issues or challenges:** |
-| | • TBD |
+| | • Large page components needed significant refactoring into modular sub-components (~12,000 lines of new code across 60+ files) |
 
 ---
 
@@ -72,7 +78,7 @@
 
 ---
 
-**Total Time Spent: 11+ hours (other members TBD)**
+**Total Time Spent: 23+ hours (other members TBD)**
 
 **Summary:**
 Week 5 focused on full frontend-backend integration. All four main dashboard pages (Catalog, Circulation, Members, Ingest) were connected to their real backend API endpoints, replacing mock/placeholder data. Edit dialogs were built for both books and members to wire up previously unused `PUT` endpoints. Backend merge conflicts were resolved, seed data was substantially expanded to support testing, and several bugs were fixed including a circulation duplicate-key issue and incorrect checkout payload fields.
