@@ -70,11 +70,19 @@
 | Name | Details |
 |------|---------|
 | **Syed Hasan** | **Tasks completed:** |
-| | • TBD |
-| **Time Spent:** TBD | **Planned tasks for next week:** |
-| | • TBD |
+| | • Implemented backend ISBN lookup endpoint `GET /ingest/lookup?isbn=` that retrieves book metadata from the Open Library API |
+| | • Built service logic to fetch and normalize metadata including title, author, publisher, publish date, cover image, and subjects |
+| | • Wired the Ingest page frontend to call the new ISBN lookup endpoint instead of using mocked data |
+| | • Added real ISBN input field and lookup button to the AI Ingest page |
+| | • Implemented metadata review flow allowing users to verify and edit book information before saving |
+| | • Integrated the lookup result with the existing `POST /books` endpoint so books can be added directly to the catalog |
+| | • Verified full end-to-end ingest flow: ISBN lookup → metadata preview → manual edits → save to catalog |
+| **Time Spent:** 12 hours | **Planned tasks for next week:** |
+| | • Improve error handling for invalid ISBN lookups |
+| | • Add loading states and UI feedback during metadata fetch |
 | | **Any issues or challenges:** |
-| | • TBD |
+| | • Environment configuration issues with PostgreSQL and Docker during local setup |
+| | • Port conflicts and environment variable expansion issues in `.env` required debugging before the ingest flow could be tested end-to-end |
 
 ---
 
