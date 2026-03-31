@@ -31,11 +31,17 @@
 | Name | Details |
 |------|---------|
 | **Marc Manoj** | **Tasks completed:** |
-| | • |
-| **Time Spent:** | **Planned tasks for next week:** |
-| | • |
+| | • Conducted a full overhaul of the project management board; updated 20+ out-of-date Jira tasks, reconciled completion statuses, and adjusted development timelines |
+| | • Established the production database environment using Supabase and successfully synced backend environment variables |
+| | • Executed Prisma migration deployments against the live Supabase instance to ensure schema parity with the development environment |
+| | • Developed a comprehensive prisma/seed.ts script to populate the system with high-fidelity test data |
+| | • Seeded realistic data including Admin/Staff/Patron accounts with hashed passwords, ~50 books with Dewey classifications, and active/past Loan records for fine calculations |
+| **Time Spent:** 12 hours | **Planned tasks for next week:** |
+| | • Multi-organization / multi-tenancy architecture |
+| | • WorldCat integration for international book identification |
+| | • Finalize Sprint 3 milestone objectives in Jira |
 | | **Any issues or challenges:** |
-| | • |
+| | • Coordinating schema changes across the team to ensure the new Supabase seed script remains compatible with ongoing frontend feature branches |
 
 ---
 
@@ -57,19 +63,19 @@
 | Name | Details |
 |------|---------|
 | **Kaelen Raible** | **Tasks completed:** |
-| | • Deployed backend (Node.js/Express) to Render, configured environment variables for AWS S3, Textract, and Neon Postgres
-| | • Set up AWS S3 bucket, IAM user, and Textract permissions for production ingestion pipeline
-| | • Connected Neon Postgres to backend, handled Prisma migration and production seeding
-| | • Deployed frontend (Next.js) to Vercel, configured environment for production API URL
-| | • Synced CORS and authentication settings between frontend and backend for secure cross-origin login
-| | • Debugged and resolved production authentication issues (SameSite=None cookie, CORS, JWT flow)
-| **Time Spent:** | **Planned tasks for next week:** |
-| 14 hours | **Planned tasks for next week:** |
-| | • Production monitoring and error alerting setup
-| | • Assist with multi-tenancy and WorldCat integration planning
+| | • Deployed backend (Node.js/Express) to Render, configured environment variables for AWS S3, Textract, and Neon Postgres |
+| | • Set up AWS S3 bucket, IAM user, and Textract permissions for production ingestion pipeline |
+| | • Connected Neon Postgres to backend, handled Prisma migration and production seeding |
+| | • Deployed frontend (Next.js) to Vercel, configured environment for production API URL |
+| | • Synced CORS and authentication settings between frontend and backend for secure cross-origin login |
+| | • Debugged and resolved production authentication issues (SameSite=None cookie, CORS, JWT flow) |
+| **Time Spent:** 14 hours | **Planned tasks for next week:** |
+| | • Production monitoring and error alerting setup |
+| | • Assist with multi-tenancy and WorldCat integration planning |
 | | **Any issues or challenges:** |
-| | • Render free plan lacks shell access, required workaround for production DB seeding
-| | • Cross-origin authentication required cookie and CORS config changes for Vercel/Render
+| | • Render free plan lacks shell access, required workaround for production DB seeding |
+| | • Cross-origin authentication required cookie and CORS config changes for Vercel/Render |
+
 ---
 
 | Name | Details |
@@ -83,14 +89,15 @@
 | | • Conducted end-to-end backend verification through manual API testing (authentication flows, map CRUD operations, validation errors, RBAC scenarios, and edge cases such as missing resources and malformed requests) |
 | | • Prepared backend for frontend integration by stabilizing API contracts and ensuring consistent response structures across all endpoints |
 | **Time Spent:** 12 hours | **Planned tasks for next week:** |
-| | • Multi-organization/multi-tenancy support 
+| | • Multi-organization/multi-tenancy support |
 | | • WorldCat integration for international book identification |
 | | • Barcode scanning via device camera |
 | | **Any issues or challenges:** |
 | | • No major issues encountered during this phase |
+
 ---
 
-**Total Time Spent: 12 hours
+**Total Time Spent:** 62 hours
 
 **Summary:**
-Week 7 focused on completing Task 4 (AI Ingestion UI & Interactive Map Integration), building a checkout cart flow from map to circulation, pushing changes to GitHub (frontend merged to main, backend PR opened for review), and planning the next phase of features with detailed write-ups and Jira tickets.
+Week 7 focused on transitioning to production-grade infrastructure, completing Task 4 (AI Ingestion UI & Interactive Map Integration), and building a checkout cart flow. Key milestones included deploying to Vercel/Render, migrating the production database to Supabase with robust data seeding, pushing core changes to GitHub, and completing a comprehensive audit of the Jira backlog to align the next phase of development.
