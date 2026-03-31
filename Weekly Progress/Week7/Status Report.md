@@ -48,7 +48,7 @@
 | | • Set up role-based access on protected dashboard pages and connected login/session handling to backend HttpOnly cookies |
 | **Time Spent:** 12 hours | **Planned tasks for next week:** |
 | | • Notifications System |
-| | • Improve and polish dashboard pages|
+| | • Multi-organization/multi-tenancy support |
 | | **Any issues or challenges:** |
 | | • No major issues or challenges |
 
