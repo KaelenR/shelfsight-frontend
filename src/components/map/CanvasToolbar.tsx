@@ -46,6 +46,7 @@ interface CanvasToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
   onSave: () => void;
+  saveDisabled?: boolean;
   onClear: () => void;
   onExportImage: () => void;
 }
@@ -105,6 +106,7 @@ export function CanvasToolbar({
   onUndo,
   onRedo,
   onSave,
+  saveDisabled = false,
   onClear,
   onExportImage,
 }: CanvasToolbarProps) {
@@ -151,7 +153,7 @@ export function CanvasToolbar({
         <Separator orientation="vertical" className="mx-1 h-5" />
 
         {/* Save */}
-        <ToolbarButton icon={Save} label="Save Layout" onClick={onSave} />
+        <ToolbarButton icon={Save} label="Save Layout" onClick={onSave} disabled={saveDisabled} />
 
         {/* Clear Canvas with confirmation */}
         <AlertDialog>

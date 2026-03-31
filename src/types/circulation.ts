@@ -70,6 +70,7 @@ export interface CheckoutQueueItem {
   bookISBN: string;
   bookAuthor: string;
   dueDate: string;
+  bookCopyId?: string;
 }
 
 export interface TransactionLog {

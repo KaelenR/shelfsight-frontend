@@ -180,7 +180,16 @@ export function BookDetailSheet({
               </h3>
               <div className="flex items-center gap-2 mb-2">
                 <MapPin className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">{book.location}</span>
+                {book.shelfId ? (
+                  <a
+                    href={`/map?shelfId=${book.shelfId}`}
+                    className="text-sm text-brand-navy hover:underline"
+                  >
+                    {book.location} →
+                  </a>
+                ) : (
+                  <span className="text-sm">{book.location}</span>
+                )}
               </div>
               <p className="text-sm text-muted-foreground">
                 {book.copies} {book.copies === 1 ? "copy" : "copies"} total

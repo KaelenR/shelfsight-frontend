@@ -22,6 +22,7 @@ import {
   Trash2,
   BookOpen,
 } from "lucide-react";
+import Link from "next/link";
 import type { Book, SortField, SortDirection } from "@/types/book";
 
 interface CatalogTableProps {
@@ -234,10 +235,20 @@ export function CatalogTable({
               </TableCell>
               <TableCell className="text-[13px]">{book.category}</TableCell>
               <TableCell>
-                <div className="flex items-center gap-1 text-[12px] text-muted-foreground">
-                  <MapPin className="w-3 h-3" />
-                  {book.location}
-                </div>
+                {book.shelfId ? (
+                  <Link
+                    href={`/map?shelfId=${book.shelfId}`}
+                    className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-brand-navy transition-colors"
+                  >
+                    <MapPin className="w-3 h-3" />
+                    {book.location}
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-1 text-[12px] text-muted-foreground">
+                    <MapPin className="w-3 h-3" />
+                    {book.location}
+                  </div>
+                )}
               </TableCell>
               <TableCell>{getStatusBadge(book.status)}</TableCell>
               <TableCell className="text-center text-[13px]">

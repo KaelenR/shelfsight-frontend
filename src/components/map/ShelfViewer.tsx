@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion } from "motion/react";
 import {
   Dialog,
@@ -16,13 +16,95 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
+import { useCheckoutCart, type CartItem } from "@/components/checkout-cart-provider";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart, Check } from "lucide-react";
+import { toast } from "sonner";
 import { generateShelfTiers } from "./shelfViewerData";
-import type { ShelfNodeData, ShelfBookDetail } from "./types";
+import type { ShelfNodeData, ShelfBookDetail, ShelfTierData } from "./types";
+
+interface BookCopyResponse {
+  id: string;
+  barcode: string;
+  status: 'AVAILABLE' | 'CHECKED_OUT' | 'LOST' | 'PROCESSING';
+  shelfId: string;
+  book: {
+    id: string;
+    title: string;
+    author: string;
+    isbn: string;
+    genre: string | null;
+    deweyDecimal: string | null;
+    coverImageUrl: string | null;
+  };
+  activeLoan: { dueDate: string; checkedOutAt: string } | null;
+}
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+const SPINE_COLORS = [
+  "#8B4513", "#A0522D", "#D2691E", "#CD853F", "#DEB887",
+  "#1a1a2e", "#16213e", "#0f3460", "#533483", "#e94560",
+  "#2d6a4f", "#40916c", "#52b788", "#74c69d", "#b7e4c7",
+  "#6d6875", "#b5838d", "#e5989b", "#ffb4a2", "#ffcdb2",
+  "#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51",
+];
+
+function deterministicColor(title: string): string {
+  return SPINE_COLORS[hashString(title) % SPINE_COLORS.length];
+}
+
+function transformCopiesToTiers(
+  copies: BookCopyResponse[],
+  numberOfTiers: number,
+  capacityPerTier: number,
+): ShelfTierData[] {
+  const tiers: ShelfTierData[] = [];
+  let copyIdx = 0;
+
+  for (let t = 0; t < numberOfTiers; t++) {
+    const books: ShelfBookDetail[] = [];
+    const tierCapacity = capacityPerTier;
+    const booksForTier = copies.slice(copyIdx, copyIdx + tierCapacity);
+    copyIdx += tierCapacity;
+
+    for (const copy of booksForTier) {
+      books.push({
+        id: copy.id,
+        title: copy.book.title,
+        author: copy.book.author,
+        isbn: copy.book.isbn,
+        dewey: copy.book.deweyDecimal || '',
+        status: copy.status === 'CHECKED_OUT' ? 'checked-out' : 'available',
+        dueDate: copy.activeLoan?.dueDate || null,
+        spineColor: deterministicColor(copy.book.title),
+        spineWidth: 20 + (hashString(copy.book.isbn) % 20),
+      });
+    }
+
+    tiers.push({
+      tierNumber: t + 1,
+      books,
+      capacity: capacityPerTier,
+    });
+  }
+
+  return tiers;
+}
 
 interface ShelfViewerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   data: ShelfNodeData;
+  shelfId: string;
 }
 
 /** Spine height based on tier count — taller when fewer tiers */
@@ -37,15 +119,33 @@ function BookSpine({
   book,
   index,
   spineHeight,
+  copyData,
 }: {
   book: ShelfBookDetail;
   index: number;
   spineHeight: number;
+  copyData?: BookCopyResponse;
 }) {
   const isOut = book.status === "checked-out";
+  const cart = useCheckoutCart();
+  const inCart = copyData ? cart.has(copyData.id) : false;
   // Slight height variation per book (±8px) so they look natural
   const heightVariation = ((book.spineWidth * 3) % 13) - 6;
   const height = spineHeight + heightVariation;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!copyData || isOut || inCart) return;
+    cart.addItem({
+      bookCopyId: copyData.id,
+      bookId: copyData.book.id,
+      title: copyData.book.title,
+      author: copyData.book.author,
+      isbn: copyData.book.isbn,
+      barcode: copyData.barcode,
+    });
+    toast.success(`Added "${copyData.book.title}" to checkout cart`);
+  };
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -55,15 +155,16 @@ function BookSpine({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.015, duration: 0.2 }}
-            className="rounded-sm border cursor-default select-none flex-shrink-0"
+            className={`rounded-sm border select-none flex-shrink-0 ${!isOut && copyData ? "cursor-pointer" : "cursor-default"}`}
             style={{
               width: book.spineWidth,
               height,
-              backgroundColor: isOut ? "transparent" : book.spineColor,
+              backgroundColor: isOut ? "transparent" : inCart ? "#22c55e" : book.spineColor,
               borderStyle: isOut ? "dashed" : "solid",
-              borderColor: isOut ? "var(--border)" : `${book.spineColor}80`,
+              borderColor: isOut ? "var(--border)" : inCart ? "#16a34a" : `${book.spineColor}80`,
               opacity: isOut ? 0.4 : 1,
             }}
+            onClick={handleAddToCart}
           >
             <div
               className="h-full w-full flex items-center justify-center overflow-hidden"
@@ -87,7 +188,7 @@ function BookSpine({
             </div>
           </motion.div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[200px]">
+        <TooltipContent side="top" className="max-w-[220px]">
           <div className="space-y-0.5">
             <p className="text-xs font-semibold">{book.title}</p>
             <p className="text-[10px] text-muted-foreground">{book.author}</p>
@@ -108,6 +209,27 @@ function BookSpine({
                 Due: {book.dueDate}
               </p>
             )}
+            {!isOut && copyData && (
+              <Button
+                size="sm"
+                variant={inCart ? "secondary" : "default"}
+                className="mt-1.5 h-6 text-[10px] w-full"
+                onClick={handleAddToCart}
+                disabled={inCart}
+              >
+                {inCart ? (
+                  <>
+                    <Check className="w-3 h-3 mr-1" />
+                    In Cart
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-3 h-3 mr-1" />
+                    Add to Cart
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </TooltipContent>
       </Tooltip>
@@ -115,8 +237,45 @@ function BookSpine({
   );
 }
 
-export function ShelfViewer({ open, onOpenChange, data }: ShelfViewerProps) {
-  const tiers = useMemo(() => generateShelfTiers(data), [data]);
+export function ShelfViewer({ open, onOpenChange, data, shelfId }: ShelfViewerProps) {
+  const [apiTiers, setApiTiers] = useState<ShelfTierData[] | null>(null);
+  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
+  const [copyMap, setCopyMap] = useState<Map<string, BookCopyResponse>>(new Map());
+  const cart = useCheckoutCart();
+  const router = useRouter();
+
+  const isNewNode = shelfId.startsWith('new-');
+  const fallbackTiers = useMemo(() => generateShelfTiers(data), [data]);
+
+  // Fetch real book data when dialog opens for saved shelves
+  useEffect(() => {
+    if (!open || isNewNode) {
+      setApiTiers(null);
+      setCopyMap(new Map());
+      return;
+    }
+
+    let cancelled = false;
+    async function fetchBooks() {
+      setIsLoadingBooks(true);
+      try {
+        const res = await apiFetch<{ success: boolean; data: BookCopyResponse[] }>(`/map/${shelfId}/books`);
+        if (cancelled) return;
+        setApiTiers(transformCopiesToTiers(res.data, data.numberOfTiers, data.capacityPerTier));
+        setCopyMap(new Map(res.data.map((c) => [c.id, c])));
+      } catch {
+        if (cancelled) return;
+        setApiTiers(null);
+        setCopyMap(new Map());
+      } finally {
+        if (!cancelled) setIsLoadingBooks(false);
+      }
+    }
+    fetchBooks();
+    return () => { cancelled = true; };
+  }, [open, shelfId, isNewNode, data.numberOfTiers, data.capacityPerTier]);
+
+  const tiers = apiTiers ?? fallbackTiers;
 
   const totalCapacity = data.numberOfTiers * data.capacityPerTier;
   const spineHeight = getSpineHeight(tiers.length);
@@ -153,6 +312,19 @@ export function ShelfViewer({ open, onOpenChange, data }: ShelfViewerProps) {
         </DialogHeader>
 
         <ScrollArea className="flex-1 -mx-6 px-6">
+          {isLoadingBooks ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-6 w-6 animate-spin rounded-full border-3 border-primary border-t-transparent" />
+                <p className="text-xs text-muted-foreground">Loading books...</p>
+              </div>
+            </div>
+          ) : !isNewNode && apiTiers && tiers.every(t => t.books.length === 0) ? (
+            <div className="flex items-center justify-center py-16">
+              <p className="text-sm text-muted-foreground">No books shelved here yet</p>
+            </div>
+          ) : (
+          <>
           {/* Horizontally scrollable wrapper for narrow screens */}
           <div className="overflow-x-auto">
           {/* Shelf frame — min-width ensures readability; scrolls horizontally on small screens */}
@@ -186,6 +358,7 @@ export function ShelfViewer({ open, onOpenChange, data }: ShelfViewerProps) {
                           book={book}
                           index={tierIdx * 10 + bookIdx}
                           spineHeight={spineHeight}
+                          copyData={copyMap.get(book.id)}
                         />
                       ))}
                       {/* Empty slots — capped for compactness */}
@@ -233,7 +406,35 @@ export function ShelfViewer({ open, onOpenChange, data }: ShelfViewerProps) {
               </span>
             </div>
           </div>
+          </>
+          )}
         </ScrollArea>
+
+        {cart.count > 0 && (
+          <div className="flex items-center justify-between border-t pt-3 mt-2">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4 text-muted-foreground" />
+              <span className="text-[13px] font-medium">
+                {cart.count} {cart.count === 1 ? "book" : "books"} in cart
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="text-[11px] h-7" onClick={() => cart.clear()}>
+                Clear Cart
+              </Button>
+              <Button
+                size="sm"
+                className="text-[11px] h-7 bg-brand-navy text-white hover:bg-brand-navy/90"
+                onClick={() => {
+                  onOpenChange(false);
+                  router.push("/circulation");
+                }}
+              >
+                Go to Checkout
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -148,3 +148,52 @@ export async function apiFetch<T = unknown>(
   const payload = await res.json();
   return normalizeSuccessPayload(payload) as T;
 }
+
+/**
+ * Upload a file via multipart/form-data.
+ *
+ * Unlike `apiFetch`, this does NOT set Content-Type — the browser auto-sets
+ * the correct multipart boundary when given a FormData body.
+ */
+export async function apiUpload<T = unknown>(
+  endpoint: string,
+  formData: FormData,
+): Promise<T> {
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+  } catch {
+    throw new ApiError(0, 'Network error — unable to reach the server');
+  }
+
+  if (!res.ok) {
+    let errorData: Record<string, unknown> = {};
+    try {
+      errorData = await res.json();
+    } catch {
+      // response body may not be JSON
+    }
+
+    const message =
+      (errorData.message as string) ||
+      (res.status === 401
+        ? 'Invalid credentials'
+        : res.status === 403
+          ? 'Access denied'
+          : 'Something went wrong');
+
+    throw new ApiError(res.status, message, errorData);
+  }
+
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  return res.json() as Promise<T>;
+}

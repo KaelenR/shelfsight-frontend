@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, MapPin } from "lucide-react";
+import Link from "next/link";
 import type { Book } from "@/types/book";
 
 interface CatalogGridProps {
@@ -131,10 +132,21 @@ export function CatalogGrid({
               </Badge>
             </div>
 
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <MapPin className="w-3 h-3" />
-              {book.location}
-            </div>
+            {book.shelfId ? (
+              <Link
+                href={`/map?shelfId=${book.shelfId}`}
+                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-brand-navy transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MapPin className="w-3 h-3" />
+                {book.location}
+              </Link>
+            ) : (
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <MapPin className="w-3 h-3" />
+                {book.location}
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}

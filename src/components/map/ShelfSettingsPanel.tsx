@@ -205,23 +205,14 @@ export function ShelfSettingsPanel({
                   />
                 </div>
 
-                {/* Current Used (for mock data control) */}
+                {/* Current Used (computed from real data) */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="current-used" className="text-xs">
-                    Books Stored
+                  <Label className="text-xs">
+                    Books Stored (computed)
                   </Label>
-                  <Input
-                    id="current-used"
-                    type="number"
-                    min={0}
-                    value={node.data.currentUsed}
-                    onChange={(e) =>
-                      update({
-                        currentUsed: Math.max(0, Number(e.target.value)),
-                      })
-                    }
-                    className="h-8 text-xs"
-                  />
+                  <div className="flex h-8 items-center rounded-md border bg-muted px-3 text-xs text-muted-foreground">
+                    {node.data.currentUsed}
+                  </div>
                 </div>
 
                 {/* Color */}
@@ -313,6 +304,7 @@ export function ShelfSettingsPanel({
         open={viewerOpen}
         onOpenChange={setViewerOpen}
         data={node.data}
+        shelfId={node.id}
       />
     )}
     </>

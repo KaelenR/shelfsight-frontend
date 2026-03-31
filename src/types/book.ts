@@ -8,6 +8,7 @@ export interface Book {
   dewey: string;
   category: string;
   location: string;
+  shelfId: string | null;
   status: BookStatus;
   copies: number;
   publisher: string;
@@ -22,7 +23,7 @@ export interface Book {
   lastModified: string;
 }
 
-export type BookFormData = Omit<Book, "id" | "dateAdded" | "lastModified">;
+export type BookFormData = Omit<Book, "id" | "dateAdded" | "lastModified" | "shelfId">;
 
 export type SortField =
   | "title"

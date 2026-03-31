@@ -19,7 +19,9 @@ import {
   X,
   AlertTriangle,
   ShoppingCart,
+  MapPin,
 } from "lucide-react";
+import { useCheckoutCart } from "@/components/checkout-cart-provider";
 import type { CirculationMember, CirculationBook, CheckoutQueueItem } from "@/types/circulation";
 import { LOAN_PERIOD_OPTIONS } from "../constants";
 
@@ -33,7 +35,7 @@ interface CheckoutTabProps {
   onBookSearchChange: (v: string) => void;
   filteredBooks: CirculationBook[];
   checkoutQueue: CheckoutQueueItem[];
-  onAddToQueue: (b: CirculationBook) => void;
+  onAddToQueue: (b: CirculationBook & { bookCopyId?: string }) => void;
   onRemoveFromQueue: (bookId: string) => void;
   onClearQueue: () => void;
   loanDays: number;
@@ -75,8 +77,60 @@ export function CheckoutTab({
     !memberSuspended &&
     !memberExpired;
 
+  const cart = useCheckoutCart();
+
+  const importCartItems = () => {
+    for (const item of cart.items) {
+      onAddToQueue({
+        id: item.bookId,
+        title: item.title,
+        author: item.author,
+        isbn: item.isbn,
+        available: true,
+        copies: 1,
+        availableCopies: 1,
+        bookCopyId: item.bookCopyId,
+      });
+    }
+    cart.clear();
+  };
+
   return (
     <div className="space-y-6">
+      {/* Cart import banner */}
+      {cart.count > 0 && (
+        <Card className="border-brand-navy/20 bg-brand-navy/5">
+          <CardContent className="py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-navy/10">
+                <MapPin className="w-4 h-4 text-brand-navy" />
+              </div>
+              <div>
+                <p className="text-[13px] font-medium">
+                  {cart.count} {cart.count === 1 ? "book" : "books"} selected from the map
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {cart.items.map((i) => i.title).join(", ")}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="text-[11px] h-7" onClick={() => cart.clear()}>
+                Dismiss
+              </Button>
+              <Button
+                size="sm"
+                className="text-[11px] h-7 bg-brand-navy text-white hover:bg-brand-navy/90"
+                onClick={importCartItems}
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add to Queue
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Member Search */}
         <Card className="flex flex-col h-[calc(100vh-44rem)] min-h-[800px]">

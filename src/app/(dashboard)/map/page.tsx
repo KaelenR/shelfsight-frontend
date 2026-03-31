@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ReactFlowProvider,
   useReactFlow,
@@ -14,6 +15,7 @@ import {
   PointerSensor,
 } from "@dnd-kit/core";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { ShelfPalette } from "@/components/map/ShelfPalette";
 import { ShelfSettingsPanel } from "@/components/map/ShelfSettingsPanel";
@@ -26,17 +28,133 @@ import {
 import { INITIAL_NODES } from "@/components/map/data";
 import type { ShelfFlowNode, ShelfNodeData, ShelfTemplate } from "@/components/map/types";
 
+interface BackendShelfSection {
+  id: string;
+  label: string;
+  mapX: number;
+  mapY: number;
+  width: number;
+  height: number;
+  floor: number;
+  sectionCode: string | null;
+  category: string;
+  deweyRangeStart: string | null;
+  deweyRangeEnd: string | null;
+  numberOfTiers: number;
+  capacityPerTier: number;
+  color: string;
+  rotation: number;
+  notes: string | null;
+  shelfType: string;
+  currentUsed: number;
+}
+
+function transformBackendToNode(section: BackendShelfSection): ShelfFlowNode {
+  return {
+    id: section.id,
+    type: 'shelf' as const,
+    position: { x: section.mapX, y: section.mapY },
+    style: { width: section.width, height: section.height },
+    data: {
+      label: section.label,
+      shelfType: section.shelfType || 'single-shelf',
+      category: section.category || 'Uncategorized',
+      deweyRangeStart: section.deweyRangeStart || '',
+      deweyRangeEnd: section.deweyRangeEnd || '',
+      numberOfTiers: section.numberOfTiers || 4,
+      capacityPerTier: section.capacityPerTier || 30,
+      currentUsed: section.currentUsed || 0,
+      sectionCode: section.sectionCode || '',
+      notes: section.notes || '',
+      color: section.color || '#1B2A4A',
+      rotation: section.rotation || 0,
+      width: section.width,
+      height: section.height,
+    } as ShelfNodeData,
+  };
+}
+
 function MapPageContent() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
+  const [nodes, setNodes, onNodesChange] = useNodesState<ShelfFlowNode>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [showMinimap, setShowMinimap] = useState(true);
   const [paletteOpen, setPaletteOpen] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const searchParams = useSearchParams();
+  const shelfIdParam = searchParams.get("shelfId");
+  const shelfQueryParam = shelfIdParam || searchParams.get("shelf");
 
   const { pushSnapshot, undo, redo, canUndo, canRedo, isProgrammatic } =
     useMapHistory(INITIAL_NODES);
   const reactFlowInstance = useReactFlow();
-  const nodeIdCounter = useRef(INITIAL_NODES.length + 1);
+  const nodeIdCounter = useRef(1);
+
+  // Load map data from API on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMap() {
+      try {
+        const sections = await apiFetch<BackendShelfSection[]>('/map');
+        if (cancelled) return;
+        if (sections && sections.length > 0) {
+          const loaded = sections.map(transformBackendToNode);
+          setNodes(loaded);
+          pushSnapshot(loaded);
+          nodeIdCounter.current = loaded.length + 1;
+          // Auto-select shelf from query param (e.g. ?shelfId=uuid or ?shelf=823)
+          if (shelfQueryParam) {
+            let match: ShelfFlowNode | undefined;
+            if (shelfIdParam) {
+              // Direct ID match
+              match = loaded.find((n) => n.id === shelfIdParam);
+            } else {
+              // Dewey range match
+              const deweyNum = parseInt(shelfQueryParam, 10);
+              match = loaded.find((n) => {
+                const start = parseInt(n.data.deweyRangeStart, 10);
+                const end = parseInt(n.data.deweyRangeEnd, 10);
+                if (isNaN(start) || isNaN(end) || isNaN(deweyNum)) return false;
+                return deweyNum >= start && deweyNum <= end;
+              });
+            }
+            if (match) {
+              setSelectedNodeId(match.id);
+              setTimeout(() => {
+                reactFlowInstance.fitView({
+                  nodes: [{ id: match.id }],
+                  padding: 0.5,
+                  duration: 500,
+                });
+              }, 200);
+            }
+          }
+        } else {
+          setNodes(INITIAL_NODES);
+          pushSnapshot(INITIAL_NODES);
+          nodeIdCounter.current = INITIAL_NODES.length + 1;
+        }
+      } catch {
+        if (cancelled) return;
+        setNodes(INITIAL_NODES);
+        pushSnapshot(INITIAL_NODES);
+        nodeIdCounter.current = INITIAL_NODES.length + 1;
+        toast.error('Failed to load map — using default layout');
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+          if (!shelfQueryParam) {
+            setTimeout(() => {
+              reactFlowInstance.fitView({ padding: 0.2 });
+            }, 100);
+          }
+        }
+      }
+    }
+    loadMap();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // DnD sensors
   const sensors = useSensors(
@@ -85,7 +203,7 @@ function MapPageContent() {
     (nodeId: string) => {
       const source = nodes.find((n) => n.id === nodeId);
       if (!source) return;
-      const newId = `shelf-${nodeIdCounter.current++}`;
+      const newId = `new-${nodeIdCounter.current++}`;
       const newNode: ShelfFlowNode = {
         ...source,
         id: newId,
@@ -97,7 +215,7 @@ function MapPageContent() {
         data: {
           ...source.data,
           label: `${source.data.label} (copy)`,
-          sectionCode: newId.replace("shelf-", "S-"),
+          sectionCode: newId.replace("new-", "S-"),
         },
       };
       const nextNodes = [...nodes, newNode];
@@ -142,7 +260,7 @@ function MapPageContent() {
         y: translated.top + translated.height / 2,
       });
 
-      const newId = `shelf-${nodeIdCounter.current++}`;
+      const newId = `new-${nodeIdCounter.current++}`;
       const newNode: ShelfFlowNode = {
         id: newId,
         type: "shelf",
@@ -151,7 +269,7 @@ function MapPageContent() {
         data: {
           ...template.defaultData,
           label: `${template.label} ${nodeIdCounter.current - 1}`,
-          sectionCode: newId.replace("shelf-", "S-"),
+          sectionCode: newId.replace("new-", "S-"),
         } as ShelfNodeData,
       };
 
@@ -208,11 +326,45 @@ function MapPageContent() {
     }
   }, [redo, setNodes, isProgrammatic]);
 
-  const handleSave = useCallback(() => {
-    const layout = { nodes };
-    console.log("Saved layout:", JSON.stringify(layout, null, 2));
-    toast.success("Layout saved to console");
-  }, [nodes]);
+  const handleSave = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const sections = nodes.map((n) => ({
+        id: n.id.startsWith('new-') ? null : n.id,
+        label: n.data.label,
+        mapX: Math.round(n.position.x),
+        mapY: Math.round(n.position.y),
+        width: typeof n.style?.width === 'number' ? n.style.width : n.data.width,
+        height: typeof n.style?.height === 'number' ? n.style.height : n.data.height,
+        floor: 1,
+        sectionCode: n.data.sectionCode || null,
+        category: n.data.category || null,
+        deweyRangeStart: n.data.deweyRangeStart || null,
+        deweyRangeEnd: n.data.deweyRangeEnd || null,
+        numberOfTiers: n.data.numberOfTiers,
+        capacityPerTier: n.data.capacityPerTier,
+        color: n.data.color || null,
+        rotation: n.data.rotation,
+        notes: n.data.notes || null,
+        shelfType: n.data.shelfType || null,
+      }));
+
+      const updated = await apiFetch<BackendShelfSection[]>('/map/layout', {
+        method: 'PUT',
+        body: sections,
+      });
+
+      // Replace nodes with real UUIDs from the response
+      const updatedNodes = updated.map(transformBackendToNode);
+      setNodes(updatedNodes);
+      pushSnapshot(updatedNodes);
+      toast.success('Layout saved successfully');
+    } catch {
+      toast.error('Failed to save layout');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [nodes, setNodes, pushSnapshot]);
 
   const handleClear = useCallback(() => {
     pushSnapshot(nodes);
@@ -273,6 +425,17 @@ function MapPageContent() {
     [onNodesChange, nodes, pushSnapshot]
   );
 
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <MapCallbacksContext.Provider value={callbacks}>
@@ -292,6 +455,7 @@ function MapPageContent() {
               onUndo={handleUndo}
               onRedo={handleRedo}
               onSave={handleSave}
+              saveDisabled={isSaving}
               onClear={handleClear}
               onExportImage={handleExportImage}
             />

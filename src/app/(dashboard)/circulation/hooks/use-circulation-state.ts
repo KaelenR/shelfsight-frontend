@@ -416,7 +416,7 @@ export function useCirculationState() {
 
   // ─── Actions: checkout (calls real API) ──────────────────
   const addToQueue = useCallback(
-    (book: CirculationBook) => {
+    (book: CirculationBook & { bookCopyId?: string }) => {
       if (checkoutQueue.some((q) => q.bookId === book.id)) return;
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + loanDays);
@@ -428,6 +428,7 @@ export function useCirculationState() {
           bookISBN: book.isbn,
           bookAuthor: book.author,
           dueDate: dueDate.toISOString().slice(0, 10),
+          bookCopyId: book.bookCopyId,
         },
       ]);
     },
@@ -448,9 +449,13 @@ export function useCirculationState() {
     try {
       // Get available copy IDs for queued books
       for (const item of checkoutQueue) {
-        const res = await apiFetch<BackendBooksResponse>(`/books?title=${encodeURIComponent(item.bookTitle)}&limit=5`);
-        const book = res.data.find((b) => b.id === item.bookId);
-        const copyId = book?.availableCopyIds?.[0];
+        let copyId = item.bookCopyId;
+        if (!copyId) {
+          // No direct copy ID — look it up from the books API
+          const res = await apiFetch<BackendBooksResponse>(`/books?title=${encodeURIComponent(item.bookTitle)}&limit=5`);
+          const book = res.data.find((b) => b.id === item.bookId);
+          copyId = book?.availableCopyIds?.[0];
+        }
         if (!copyId) {
           throw new Error(`No available copy for "${item.bookTitle}"`);
         }

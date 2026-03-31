@@ -22,6 +22,8 @@ interface BackendBook {
   totalCopies: number;
   availableCopyIds?: string[];
   createdAt: string;
+  shelfId?: string | null;
+  shelfLabel?: string | null;
 }
 
 interface BackendBooksResponse {
@@ -59,7 +61,8 @@ function transformBook(b: BackendBook): Book {
     isbn: b.isbn,
     dewey,
     category,
-    location: dewey ? `Shelf ${dewey.split(".")[0]}` : "—",
+    location: b.shelfLabel ?? (dewey ? `Shelf ${dewey.split(".")[0]}` : "—"),
+    shelfId: b.shelfId ?? null,
     status,
     copies: b.totalCopies,
     publisher: "",
