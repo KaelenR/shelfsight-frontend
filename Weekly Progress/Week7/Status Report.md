@@ -71,7 +71,6 @@
 | | • Debugged and resolved production authentication issues (SameSite=None cookie, CORS, JWT flow) |
 | **Time Spent:** 14 hours | **Planned tasks for next week:** |
 | | • Production monitoring and error alerting setup |
-| | • Assist with multi-tenancy and WorldCat integration planning |
 | | **Any issues or challenges:** |
 | | • Render free plan lacks shell access, required workaround for production DB seeding |
 | | • Cross-origin authentication required cookie and CORS config changes for Vercel/Render |
