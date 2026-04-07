@@ -51,11 +51,14 @@
 | Name | Details |
 |------|---------|
 | **Kaelen Raible** | **Tasks completed:** |
-| | • |
-| **Time Spent:** hours | **Planned tasks for next week:** |
-| | • |
+| | • Fixed shelf layout save failure — corrected hardcoded fallback node IDs ("shelf-1" etc.) to use "new-" prefix so the backend creates rather than tries to update non-existent records |
+| | • Fixed book update not persisting copies or page count — added pageCount to Prisma schema + migration, updated backend service and frontend API call end-to-end |
+| | • Fixed book deletion failing due to foreign key constraints — rewrote deleteBookService to cascade-delete loans, events, and copies in a transaction before removing the book |
+| **Time Spent:** 12 hours | **Planned tasks for next week:** |
+| | • Ensure book/shelf edits save correctly across all edge cases |
 | | **Any issues or challenges:** |
-| | • |
+| | • pageCount migration had to be created manually since db push was used on production instead of migrate deploy; resolved by running migrate dev locally and deploying the generated SQL file |
+| | • Render shell access required to run migrate deploy on production database after each schema change |
 
 ---
 
@@ -78,4 +81,4 @@
 **Total Time Spent:** 20+ hours (other team members to be added)
 
 **Summary:**
-Week 8 focused on fixing critical catalog and map bugs. The book update flow (KAN-55) was verified as resolved on main, the map shelf viewer (KAN-57) was fixed to correctly handle the API response envelope unwrapping, and a shelf location dropdown (KAN-56) was added to the book edit form with full backend integration for shelf assignment. All changes were validated with TypeScript compilation and production builds across both repos.
+Week 8 focused on fixing critical catalog and map bugs. The book update flow (KAN-55) was verified as resolved on main, the map shelf viewer (KAN-57) was fixed to correctly handle the API response envelope unwrapping, and a shelf location dropdown (KAN-56) was added to the book edit form with full backend integration for shelf assignment. The shelf layout save failure was resolved by correcting hardcoded fallback node IDs to use the "new-" prefix convention the backend expects. Book deletion was fixed by adding cascading cleanup of dependent records in a transaction. The pageCount field was added to the Book model end-to-end (schema, migration, backend service, frontend API and transform). All changes were validated with TypeScript compilation and production builds across both repos.
