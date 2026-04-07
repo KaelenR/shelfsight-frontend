@@ -182,6 +182,7 @@ export async function apiUpload<T = unknown>(
 
     const message =
       (errorData.message as string) ||
+      ((errorData.error as Record<string, unknown>)?.message as string) ||
       (res.status === 401
         ? 'Invalid credentials'
         : res.status === 403

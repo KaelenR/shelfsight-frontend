@@ -42,11 +42,11 @@ function transformBook(b: BackendBook): Book {
   const dewey = b.deweyDecimal ?? "";
   const category = dewey ? getDeweyCategory(dewey) : b.genre ?? "General";
   const status: Book["status"] =
-    b.totalCopies === 0
-      ? "maintenance"
-      : b.availableCopies > 0
+    b.availableCopies > 0
       ? "available"
-      : "checked-out";
+      : b.totalCopies > 0
+      ? "checked-out"
+      : "available";
 
   const yearNum =
     b.publishYear != null && b.publishYear !== ""
@@ -144,6 +144,8 @@ export async function createBook(data: BookFormData): Promise<Book> {
       deweyDecimal: data.dewey || undefined,
       coverImageUrl: data.coverImageUrl || undefined,
       publishYear: data.publishYear ? String(data.publishYear) : undefined,
+      copies: data.copies ?? 1,
+      status: data.status,
     },
   });
   return transformBook(b);

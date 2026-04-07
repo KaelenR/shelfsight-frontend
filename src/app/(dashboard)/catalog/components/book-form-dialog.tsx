@@ -23,6 +23,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { createBook, updateBook } from "@/lib/books";
+import { ApiError } from "@/lib/api";
 import { getDeweyCategory, LANGUAGES, STATUS_OPTIONS } from "../constants";
 import type { Book, BookFormData } from "@/types/book";
 
@@ -85,6 +86,7 @@ export function BookFormDialog({
     setValue,
     watch,
     reset,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ defaultValues });
 
@@ -160,8 +162,24 @@ export function BookFormDialog({
         onOpenChange(false);
         onSuccess(created);
       }
-    } catch {
-      toast.error(isEdit ? "Failed to update book" : "Failed to add book");
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const errorEnvelope = err.data?.error as Record<string, unknown> | undefined;
+        const fieldErrors = (errorEnvelope?.details as Record<string, unknown>)
+          ?.fieldErrors as Record<string, string> | undefined;
+        if (fieldErrors) {
+          Object.entries(fieldErrors).forEach(([field, message]) => {
+            setError(field as keyof FormValues, { message });
+          });
+        }
+        toast.error(
+          (errorEnvelope?.message as string) ||
+            err.message ||
+            (isEdit ? "Failed to update book" : "Failed to add book")
+        );
+      } else {
+        toast.error(isEdit ? "Failed to update book" : "Failed to add book");
+      }
     }
   };
 
