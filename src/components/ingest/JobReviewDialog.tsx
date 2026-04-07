@@ -63,7 +63,7 @@ interface JobReviewDialogProps {
   job: IngestionJob | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onActionComplete: () => void;
+  onActionComplete: () => Promise<void> | void;
 }
 
 interface FormFields {
@@ -101,6 +101,7 @@ export default function JobReviewDialog({
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [ocrOpen, setOcrOpen] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (job) {
@@ -114,8 +115,15 @@ export default function JobReviewDialog({
         publishYear: job.suggestedPublishDate ?? "",
       });
       setOcrOpen(false);
+      setActionError(null);
     }
   }, [job]);
+
+  useEffect(() => {
+    if (!open) {
+      setActionError(null);
+    }
+  }, [open]);
 
   const updateField =
     (field: keyof FormFields) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,15 +131,25 @@ export default function JobReviewDialog({
     };
 
   const canAct = job?.status === "COMPLETED";
+  const isSubmitting = isApproving || isRejecting;
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (isSubmitting) {
+      return;
+    }
+    onOpenChange(nextOpen);
+  };
 
   const handleApprove = async () => {
     if (!job || !canAct) return;
 
     if (!form.title || !form.author) {
+      setActionError("Title and author are required to approve.");
       toast.error("Title and author are required to approve.");
       return;
     }
 
+    setActionError(null);
     setIsApproving(true);
     try {
       await apiFetch(`/ingest/jobs/${job.id}/approve`, {
@@ -142,16 +160,18 @@ export default function JobReviewDialog({
           isbn: form.isbn || undefined,
           genre: form.genre || undefined,
           deweyDecimal: form.deweyDecimal || undefined,
+          language: job.language || undefined,
           coverImageUrl: form.coverImageUrl || undefined,
           publishYear: form.publishYear || undefined,
         },
       });
+      await onActionComplete();
       toast.success("Job approved and book added to catalog.");
       onOpenChange(false);
-      onActionComplete();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to approve job";
+      setActionError(message);
       toast.error(message);
     } finally {
       setIsApproving(false);
@@ -161,17 +181,19 @@ export default function JobReviewDialog({
   const handleReject = async () => {
     if (!job || !canAct) return;
 
+    setActionError(null);
     setIsRejecting(true);
     try {
       await apiFetch(`/ingest/jobs/${job.id}/reject`, {
         method: "POST",
       });
+      await onActionComplete();
       toast.success("Job rejected.");
       onOpenChange(false);
-      onActionComplete();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to reject job";
+      setActionError(message);
       toast.error(message);
     } finally {
       setIsRejecting(false);
@@ -179,7 +201,7 @@ export default function JobReviewDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="font-display text-base">
@@ -350,15 +372,25 @@ export default function JobReviewDialog({
                   {job.deweyReasoning}
                 </p>
               )}
+
+              {!canAct && (
+                <p className="text-[11px] text-muted-foreground">
+                  This job has already been reviewed and can only be viewed.
+                </p>
+              )}
             </div>
           </div>
+        )}
+
+        {actionError && (
+          <p className="text-[12px] text-destructive">{actionError}</p>
         )}
 
         <DialogFooter>
           <Button
             variant="destructive"
             size="sm"
-            disabled={!canAct || isRejecting || isApproving}
+            disabled={!canAct || isSubmitting}
             onClick={handleReject}
             className="text-xs"
           >
@@ -367,11 +399,11 @@ export default function JobReviewDialog({
             ) : (
               <XCircle className="mr-2 h-3.5 w-3.5" />
             )}
-            Reject
+            {isRejecting ? "Rejecting..." : "Reject"}
           </Button>
           <Button
             size="sm"
-            disabled={!canAct || isApproving || isRejecting}
+            disabled={!canAct || isSubmitting}
             onClick={handleApprove}
             className="bg-brand-navy text-xs text-white hover:bg-brand-navy/90"
           >
@@ -380,7 +412,7 @@ export default function JobReviewDialog({
             ) : (
               <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
             )}
-            Approve & Add to Catalog
+            {isApproving ? "Approving..." : "Approve & Add to Catalog"}
           </Button>
         </DialogFooter>
       </DialogContent>

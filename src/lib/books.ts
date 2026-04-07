@@ -16,9 +16,11 @@ interface BackendBook {
   isbn: string;
   genre: string | null;
   deweyDecimal: string | null;
+  language: string | null;
   coverImageUrl: string | null;
   publishYear?: string | null;
   availableCopies: number;
+  processingCopies?: number;
   totalCopies: number;
   availableCopyIds?: string[];
   createdAt: string;
@@ -41,9 +43,12 @@ interface BackendBooksResponse {
 function transformBook(b: BackendBook): Book {
   const dewey = b.deweyDecimal ?? "";
   const category = dewey ? getDeweyCategory(dewey) : b.genre ?? "General";
+  const processingCopies = b.processingCopies ?? 0;
   const status: Book["status"] =
     b.availableCopies > 0
       ? "available"
+      : processingCopies > 0
+      ? "maintenance"
       : b.totalCopies > 0
       ? "checked-out"
       : "available";
@@ -68,7 +73,7 @@ function transformBook(b: BackendBook): Book {
     publisher: "",
     publishYear,
     edition: "",
-    language: "English",
+    language: b.language ?? "English",
     pageCount: 0,
     description: "",
     subjects: b.genre ? [b.genre] : [],
@@ -81,50 +86,38 @@ function transformBook(b: BackendBook): Book {
 // ── API Functions ────────────────────────────────────────────────────
 
 export async function getBooks(
-  params: BookQueryParams = {}
+  params: BookQueryParams = {},
+  signal?: AbortSignal
 ): Promise<BookListResponse> {
   const searchParams = new URLSearchParams();
 
   // Map frontend query params to backend query params
-  if (params.search) searchParams.set("title", params.search);
+  if (params.search) searchParams.set("search", params.search);
+  if (params.category) searchParams.set("category", params.category);
+  if (params.status) searchParams.set("status", params.status);
+  if (params.language) searchParams.set("language", params.language);
+  if (params.yearMin != null) searchParams.set("yearMin", String(params.yearMin));
+  if (params.yearMax != null) searchParams.set("yearMax", String(params.yearMax));
+  if (params.sortBy) searchParams.set("sortBy", params.sortBy);
+  if (params.sortDir) searchParams.set("sortDir", params.sortDir);
 
   // Pagination
   const page = params.page ?? 1;
   const pageSize = params.pageSize ?? 10;
-  const filterByCategory = !!params.category && params.category !== "all";
-
-  // Category labels in the UI are Dewey-derived and do not always match backend
-  // genre values (e.g. "Literature" vs seeded "Fiction"), so fetch a larger
-  // slice and apply category filtering on transformed data client-side.
-  searchParams.set("page", filterByCategory ? "1" : String(page));
-  searchParams.set("limit", filterByCategory ? "1000" : String(pageSize));
+  searchParams.set("page", String(page));
+  searchParams.set("limit", String(pageSize));
 
   const qs = searchParams.toString();
   const res = await apiFetch<BackendBooksResponse>(
-    `/books${qs ? `?${qs}` : ""}`
+    `/books${qs ? `?${qs}` : ""}`,
+    { signal }
   );
 
-  const transformed = res.data.map(transformBook);
-  if (!filterByCategory) {
-    return {
-      books: transformed,
-      total: res.pagination.total,
-      page: res.pagination.page,
-      pageSize: res.pagination.limit,
-    };
-  }
-
-  const categoryFiltered = filterByCategory
-    ? transformed.filter((book) => book.category === params.category)
-    : transformed;
-  const start = (page - 1) * pageSize;
-  const paginated = categoryFiltered.slice(start, start + pageSize);
-
   return {
-    books: paginated,
-    total: categoryFiltered.length,
-    page,
-    pageSize,
+    books: res.data.map(transformBook),
+    total: res.pagination.total,
+    page: res.pagination.page,
+    pageSize: res.pagination.limit,
   };
 }
 
@@ -142,6 +135,7 @@ export async function createBook(data: BookFormData): Promise<Book> {
       isbn: data.isbn,
       genre: data.category || data.subjects?.[0] || undefined,
       deweyDecimal: data.dewey || undefined,
+      language: data.language || undefined,
       coverImageUrl: data.coverImageUrl || undefined,
       publishYear: data.publishYear ? String(data.publishYear) : undefined,
       copies: data.copies ?? 1,
@@ -163,6 +157,7 @@ export async function updateBook(
       isbn: data.isbn,
       genre: data.category || data.subjects?.[0] || undefined,
       deweyDecimal: data.dewey || undefined,
+      language: data.language || undefined,
       coverImageUrl: data.coverImageUrl || undefined,
       publishYear: data.publishYear != null ? String(data.publishYear) : undefined,
     },

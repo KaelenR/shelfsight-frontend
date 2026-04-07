@@ -27,6 +27,7 @@ import {
   Trash2,
   X,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { CATEGORIES, LANGUAGES, STATUS_OPTIONS } from "../constants";
 import type { CatalogFilters } from "../hooks/use-catalog-state";
@@ -37,6 +38,8 @@ interface CatalogToolbarProps {
   filters: CatalogFilters;
   onFilterChange: (key: keyof CatalogFilters, value: string) => void;
   activeFilterCount: number;
+  isSearchPending: boolean;
+  isSearching: boolean;
   onClearFilters: () => void;
   viewMode: "table" | "grid";
   onViewModeChange: (mode: "table" | "grid") => void;
@@ -55,6 +58,8 @@ export function CatalogToolbar({
   filters,
   onFilterChange,
   activeFilterCount,
+  isSearchPending,
+  isSearching,
   onClearFilters,
   viewMode,
   onViewModeChange,
@@ -68,6 +73,8 @@ export function CatalogToolbar({
 }: CatalogToolbarProps) {
   const canEdit = userRole === "ADMIN" || userRole === "STAFF";
   const canDelete = userRole === "ADMIN";
+  const hasActiveSearch = searchQuery.trim().length > 0;
+  const activeCriteriaCount = activeFilterCount + (hasActiveSearch ? 1 : 0);
 
   return (
     <Card className="mb-6">
@@ -75,12 +82,12 @@ export function CatalogToolbar({
         <CardTitle className="flex items-center gap-2 text-base font-display">
           <Filter className="w-4 h-4 text-brand-copper" />
           Search & Filter
-          {activeFilterCount > 0 && (
+          {activeCriteriaCount > 0 && (
             <Badge className="bg-brand-copper/15 text-brand-copper border-0 text-[10px] ml-1">
-              {activeFilterCount} active
+              {activeCriteriaCount} active
             </Badge>
           )}
-          {activeFilterCount > 0 && (
+          {activeCriteriaCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
@@ -102,8 +109,22 @@ export function CatalogToolbar({
               placeholder="Search by title, author, ISBN, or Dewey number..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-10"
             />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              {isSearchPending || isSearching ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+              ) : hasActiveSearch ? (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange("")}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              ) : null}
+            </div>
           </div>
           <Select
             value={filters.category}
@@ -205,6 +226,12 @@ export function CatalogToolbar({
             <span className="text-xs text-muted-foreground">
               {totalResults} {totalResults === 1 ? "book" : "books"} found
             </span>
+            {isSearchPending && (
+              <span className="text-xs text-muted-foreground">Typing...</span>
+            )}
+            {!isSearchPending && isSearching && (
+              <span className="text-xs text-muted-foreground">Searching...</span>
+            )}
             {selectedCount > 0 && (
               <Badge variant="outline" className="text-[10px]">
                 {selectedCount} selected

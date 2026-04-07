@@ -13,31 +13,67 @@ function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function isAbortError(error: unknown): boolean {
+  return (
+    (typeof DOMException !== 'undefined' &&
+      error instanceof DOMException &&
+      error.name === 'AbortError') ||
+    (error instanceof Error && error.name === 'AbortError')
+  );
+}
+
+function toFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+}
+
+function normalizePaginationRecord(value: unknown): UnknownRecord | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const page = toFiniteNumber(value.page);
+  const limit = toFiniteNumber(value.limit);
+  const total = toFiniteNumber(value.total);
+
+  if (page === undefined || limit === undefined || total === undefined) {
+    return undefined;
+  }
+
+  const safePage = Math.max(1, Math.trunc(page));
+  const safeLimit = Math.max(1, Math.trunc(limit));
+  const safeTotal = Math.max(0, Math.trunc(total));
+
+  const totalPagesValue = toFiniteNumber(value.totalPages);
+  const safeTotalPages =
+    totalPagesValue !== undefined
+      ? Math.max(1, Math.trunc(totalPagesValue))
+      : Math.max(1, Math.ceil(safeTotal / safeLimit));
+
+  return {
+    page: safePage,
+    limit: safeLimit,
+    total: safeTotal,
+    totalPages: safeTotalPages,
+  };
+}
+
 function extractPagination(meta: unknown): UnknownRecord | undefined {
   if (!isRecord(meta)) {
     return undefined;
   }
 
-  const nested = meta.pagination;
-  if (isRecord(nested)) {
-    return nested;
-  }
-
-  if (
-    typeof meta.page === 'number' &&
-    typeof meta.limit === 'number' &&
-    typeof meta.total === 'number' &&
-    typeof meta.totalPages === 'number'
-  ) {
-    return {
-      page: meta.page,
-      limit: meta.limit,
-      total: meta.total,
-      totalPages: meta.totalPages,
-    };
-  }
-
-  return undefined;
+  return normalizePaginationRecord(meta.pagination) ?? normalizePaginationRecord(meta);
 }
 
 function normalizeSuccessPayload(payload: unknown): unknown {
@@ -114,8 +150,11 @@ export async function apiFetch<T = unknown>(
 
   try {
     res = await fetch(url, config);
-  } catch {
-    throw new ApiError(0, 'Network error — unable to reach the server');
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+    throw new ApiError(0, 'Network error - unable to reach the server');
   }
 
   if (!res.ok) {
@@ -152,7 +191,7 @@ export async function apiFetch<T = unknown>(
 /**
  * Upload a file via multipart/form-data.
  *
- * Unlike `apiFetch`, this does NOT set Content-Type — the browser auto-sets
+ * Unlike `apiFetch`, this does NOT set Content-Type - the browser auto-sets
  * the correct multipart boundary when given a FormData body.
  */
 export async function apiUpload<T = unknown>(
@@ -168,8 +207,11 @@ export async function apiUpload<T = unknown>(
       credentials: 'include',
       body: formData,
     });
-  } catch {
-    throw new ApiError(0, 'Network error — unable to reach the server');
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+    throw new ApiError(0, 'Network error - unable to reach the server');
   }
 
   if (!res.ok) {

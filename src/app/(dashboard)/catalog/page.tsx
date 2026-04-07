@@ -88,6 +88,8 @@ export default function CatalogPage() {
         filters={catalog.filters}
         onFilterChange={catalog.setFilter}
         activeFilterCount={catalog.activeFilterCount}
+        isSearchPending={catalog.isSearchPending}
+        isSearching={catalog.isSearching}
         onClearFilters={catalog.clearAllFilters}
         viewMode={catalog.viewMode}
         onViewModeChange={catalog.setViewMode}
@@ -153,6 +155,7 @@ export default function CatalogPage() {
         page={catalog.page}
         pageSize={catalog.pageSize}
         total={catalog.total}
+        isLoading={catalog.isLoading}
         onPageChange={catalog.setPage}
         onPageSizeChange={catalog.setPageSize}
       />

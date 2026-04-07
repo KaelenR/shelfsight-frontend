@@ -51,50 +51,23 @@ import JobReviewDialog from "@/components/ingest/JobReviewDialog";
 /*  Types                                                                      */
 /* -------------------------------------------------------------------------- */
 
-interface LookupResponse {
-  success: boolean;
-  data: {
-    isbn: string;
-    found: boolean;
-    metadata: {
-      isbn: string | null;
-      title: string | null;
-      author: string | null;
-      publisher: string | null;
-      publishDate: string | null;
-      coverImageUrl: string | null;
-      subjects: string[];
-      source: string | null;
-    };
-  };
+type UnknownRecord = Record<string, unknown>;
+
+interface LookupMetadata {
+  isbn: string | null;
+  title: string | null;
+  author: string | null;
+  publisher: string | null;
+  publishDate: string | null;
+  coverImageUrl: string | null;
+  subjects: string[];
+  source: string | null;
 }
 
-interface AnalyzeResponse {
-  success: boolean;
-  data: {
-    jobId: string;
-    image: string;
-    ocr: string;
-    isbn: {
-      detected: string | null;
-      metadata: {
-        isbn: string | null;
-        title: string | null;
-        author: string | null;
-        publisher: string | null;
-        publishDate: string | null;
-        coverImageUrl: string | null;
-        subjects: string[];
-        source: string | null;
-      } | null;
-    };
-    classification: {
-      dewey_class: string | null;
-      confidence_score: number | null;
-      reasoning: string | null;
-    };
-    language: string | null;
-  };
+interface LookupResult {
+  isbn: string;
+  found: boolean;
+  metadata: LookupMetadata | null;
 }
 
 interface IngestionJob {
@@ -121,9 +94,8 @@ interface IngestionJob {
 }
 
 interface JobsResponse {
-  success: boolean;
   data: IngestionJob[];
-  meta: { total: number; page: number; limit: number };
+  meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
 type ReviewState = {
@@ -199,6 +171,181 @@ function confidenceBadgeClass(score: number | null): string {
   return "border-red-500/20 bg-red-500/10 text-red-600";
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function asNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function parseLookupMetadata(value: unknown): LookupMetadata | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    isbn: asString(value.isbn),
+    title: asString(value.title),
+    author: asString(value.author),
+    publisher: asString(value.publisher),
+    publishDate: asString(value.publishDate),
+    coverImageUrl: asString(value.coverImageUrl),
+    subjects: asStringArray(value.subjects),
+    source: asString(value.source),
+  };
+}
+
+function parseLookupResult(value: unknown, fallbackIsbn: string): LookupResult {
+  const root = isRecord(value) ? value : {};
+  const payload = isRecord(root.data) ? root.data : root;
+  const metadata = parseLookupMetadata(payload.metadata);
+  const isbn = asString(payload.isbn) ?? fallbackIsbn;
+
+  const hasMetadata =
+    metadata !== null &&
+    Boolean(
+      metadata.title ||
+        metadata.author ||
+        metadata.isbn ||
+        metadata.publisher ||
+        metadata.subjects.length > 0
+    );
+
+  return {
+    isbn,
+    found: typeof payload.found === "boolean" ? payload.found : hasMetadata,
+    metadata,
+  };
+}
+
+function parseAnalyzeResult(value: unknown): {
+  detectedIsbn: string;
+  metadata: LookupMetadata | null;
+  dewey: string;
+  confidence: number | null;
+  reasoning: string | null;
+  language: string | null;
+} {
+  const root = isRecord(value) ? value : {};
+  const payload = isRecord(root.data) ? root.data : root;
+  const isbnBlock = isRecord(payload.isbn) ? payload.isbn : {};
+  const classification = isRecord(payload.classification) ? payload.classification : {};
+
+  return {
+    detectedIsbn: asString(isbnBlock.detected) ?? "",
+    metadata: parseLookupMetadata(isbnBlock.metadata),
+    dewey: asString(classification.dewey_class) ?? "",
+    confidence: asNumber(classification.confidence_score),
+    reasoning: asString(classification.reasoning),
+    language: asString(payload.language),
+  };
+}
+
+function parseIngestionJob(value: unknown): IngestionJob | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const status =
+    typeof value.status === "string" &&
+    ["PENDING", "PROCESSING", "COMPLETED", "FAILED", "APPROVED", "REJECTED"].includes(
+      value.status
+    )
+      ? (value.status as IngestionJob["status"])
+      : "PENDING";
+
+  const id = asString(value.id);
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    imageUrl: asString(value.imageUrl) ?? "",
+    status,
+    ocrText: asString(value.ocrText),
+    detectedIsbn: asString(value.detectedIsbn),
+    suggestedDewey: asString(value.suggestedDewey),
+    confidenceScore: asNumber(value.confidenceScore),
+    suggestedTitle: asString(value.suggestedTitle),
+    suggestedAuthor: asString(value.suggestedAuthor),
+    suggestedPublisher: asString(value.suggestedPublisher),
+    suggestedPublishDate: asString(value.suggestedPublishDate),
+    suggestedGenre: asString(value.suggestedGenre),
+    coverImageUrl: asString(value.coverImageUrl),
+    metadataSource: asString(value.metadataSource),
+    deweyReasoning: asString(value.deweyReasoning),
+    language: asString(value.language),
+    reviewedBy: asString(value.reviewedBy),
+    reviewedAt: asString(value.reviewedAt),
+    createdBookId: asString(value.createdBookId),
+    createdAt: asString(value.createdAt) ?? new Date().toISOString(),
+  };
+}
+
+function parseJobsResult(
+  value: unknown,
+  requestedPage: number,
+  fallbackLimit: number
+): JobsResponse {
+  const root = isRecord(value) ? value : {};
+  const payload = isRecord(root.data) ? root.data : root;
+  const jobsListRaw = Array.isArray(payload.data)
+    ? payload.data
+    : Array.isArray(payload.jobs)
+      ? payload.jobs
+      : Array.isArray(root.data)
+        ? root.data
+        : Array.isArray(root.jobs)
+          ? root.jobs
+          : Array.isArray(value)
+            ? value
+            : [];
+
+  const jobs = jobsListRaw
+    .map((item) => parseIngestionJob(item))
+    .filter((job): job is IngestionJob => job !== null);
+
+  const metaSource =
+    (isRecord(payload.meta) && payload.meta) ||
+    (isRecord(payload.pagination) && payload.pagination) ||
+    (isRecord(root.meta) && root.meta) ||
+    (isRecord(root.pagination) && root.pagination) ||
+    {};
+
+  const page = Math.max(1, Math.trunc(asNumber(metaSource.page) ?? requestedPage));
+  const limit = Math.max(1, Math.trunc(asNumber(metaSource.limit) ?? fallbackLimit));
+  const total = Math.max(0, Math.trunc(asNumber(metaSource.total) ?? jobs.length));
+  const totalPages = Math.max(
+    1,
+    Math.trunc(asNumber(metaSource.totalPages) ?? Math.ceil(total / limit))
+  );
+
+  return {
+    data: jobs,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages,
+    },
+  };
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Page Component                                                             */
 /* -------------------------------------------------------------------------- */
@@ -230,8 +377,12 @@ export default function BookIngestionPage() {
   const [activeTab, setActiveTab] = useState("analyze");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [jobs, setJobs] = useState<IngestionJob[]>([]);
-  const [jobsMeta, setJobsMeta] = useState({ total: 0, page: 1, limit: 10 });
+  const [jobsPage, setJobsPage] = useState(1);
+  const [jobsMeta, setJobsMeta] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  const jobsAbortRef = useRef<AbortController | null>(null);
+  const jobsRequestIdRef = useRef(0);
 
   // Review dialog state
   const [reviewJob, setReviewJob] = useState<IngestionJob | null>(null);
@@ -266,23 +417,25 @@ export default function BookIngestionPage() {
     setIsLookingUp(true);
 
     try {
-      const result = await apiFetch<LookupResponse>(
+      const response = await apiFetch<unknown>(
         `/ingest/lookup?${new URLSearchParams({ isbn: trimmedIsbn }).toString()}`
-      ).then((response) => response.data);
+      );
+      const result = parseLookupResult(response, trimmedIsbn);
       const metadata = result.metadata;
+      const metadataSubjects = metadata?.subjects ?? [];
 
       setReviewData({
         isbn: result.isbn,
-        title: metadata.title ?? "",
-        author: metadata.author ?? "",
-        publisher: metadata.publisher ?? "",
-        publishDate: metadata.publishDate ?? "",
-        genre: metadata.subjects[0] ?? "",
+        title: metadata?.title ?? "",
+        author: metadata?.author ?? "",
+        publisher: metadata?.publisher ?? "",
+        publishDate: metadata?.publishDate ?? "",
+        genre: metadataSubjects[0] ?? "",
         dewey: "",
-        coverImageUrl: metadata.coverImageUrl ?? "",
-        source: metadata.source ?? "",
+        coverImageUrl: metadata?.coverImageUrl ?? "",
+        source: metadata?.source ?? "",
         found: result.found,
-        subjects: metadata.subjects,
+        subjects: metadataSubjects,
         deweyConfidence: null,
         deweyReasoning: null,
         language: null,
@@ -348,28 +501,42 @@ export default function BookIngestionPage() {
       const formData = new FormData();
       formData.append("image", selectedFile);
 
-      const result = await apiUpload<AnalyzeResponse>("/ingest/analyze", formData);
-      const { isbn, classification } = result.data;
-      const metadata = isbn.metadata;
+      const response = await apiUpload<unknown>("/ingest/analyze", formData);
+      const parsed = parseAnalyzeResult(response);
+      const metadataSubjects = parsed.metadata?.subjects ?? [];
+      const hasExtractedMetadata = Boolean(
+        parsed.metadata &&
+          (parsed.metadata.title ||
+            parsed.metadata.author ||
+            parsed.metadata.isbn ||
+            parsed.metadata.publisher ||
+            metadataSubjects.length > 0)
+      );
 
       setReviewData({
-        isbn: isbn.detected ?? "",
-        title: metadata?.title ?? "",
-        author: metadata?.author ?? "",
-        publisher: metadata?.publisher ?? "",
-        publishDate: metadata?.publishDate ?? "",
-        genre: metadata?.subjects?.[0] ?? "",
-        dewey: classification.dewey_class ?? "",
-        coverImageUrl: metadata?.coverImageUrl ?? "",
-        source: metadata?.source ?? "AI Analysis",
-        found: !!(metadata?.title || metadata?.author),
-        subjects: metadata?.subjects ?? [],
-        deweyConfidence: classification.confidence_score,
-        deweyReasoning: classification.reasoning,
-        language: result.data.language,
+        isbn: parsed.detectedIsbn,
+        title: parsed.metadata?.title ?? "",
+        author: parsed.metadata?.author ?? "",
+        publisher: parsed.metadata?.publisher ?? "",
+        publishDate: parsed.metadata?.publishDate ?? "",
+        genre: metadataSubjects[0] ?? "",
+        dewey: parsed.dewey,
+        coverImageUrl: parsed.metadata?.coverImageUrl ?? "",
+        source: parsed.metadata?.source ?? "OCR+LLM",
+        found: hasExtractedMetadata,
+        subjects: metadataSubjects,
+        deweyConfidence: parsed.confidence,
+        deweyReasoning: parsed.reasoning,
+        language: parsed.language,
       });
 
-      toast.success("Image analyzed successfully. Review the extracted metadata.");
+      if (hasExtractedMetadata) {
+        toast.success("Image analyzed successfully. Review the extracted metadata.");
+      } else {
+        toast.warning(
+          "Image analyzed, but metadata is incomplete. Fill in required fields manually."
+        );
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Image analysis failed";
@@ -400,6 +567,7 @@ export default function BookIngestionPage() {
           isbn: reviewData.isbn,
           genre: reviewData.genre || undefined,
           deweyDecimal: reviewData.dewey || undefined,
+          language: reviewData.language || undefined,
           coverImageUrl: reviewData.coverImageUrl || undefined,
           publishDate: reviewData.publishDate || undefined,
         },
@@ -416,52 +584,109 @@ export default function BookIngestionPage() {
     }
   };
 
-  if (user && !canAccess) {
-    return null;
-  }
-
   /* ----- Review Queue ----- */
 
   const fetchJobs = useCallback(
-    async (page = 1) => {
+    async (requestedPage: number) => {
+      const requestId = ++jobsRequestIdRef.current;
+
+      jobsAbortRef.current?.abort();
+      const controller = new AbortController();
+      jobsAbortRef.current = controller;
+
       setIsLoadingJobs(true);
+      setJobsError(null);
+
       try {
         const params = new URLSearchParams({
-          page: String(page),
+          page: String(requestedPage),
           limit: String(jobsMeta.limit),
         });
         if (statusFilter !== "ALL") {
           params.set("status", statusFilter);
         }
 
-        const result = await apiFetch<JobsResponse>(
-          `/ingest/jobs?${params.toString()}`
+        const response = await apiFetch<unknown>(
+          `/ingest/jobs?${params.toString()}`,
+          { signal: controller.signal }
         );
+        const result = parseJobsResult(response, requestedPage, jobsMeta.limit);
+
+        if (requestId !== jobsRequestIdRef.current) {
+          return;
+        }
+
+        const resolvedTotalPages = result.meta.totalPages;
+        if (result.meta.total > 0 && requestedPage > resolvedTotalPages) {
+          setJobsPage(resolvedTotalPages);
+          return;
+        }
+        if (result.meta.total === 0 && requestedPage !== 1) {
+          setJobsPage(1);
+          return;
+        }
+
         setJobs(result.data);
+        setJobsPage(result.meta.page);
         setJobsMeta(result.meta);
       } catch (error) {
+        if (controller.signal.aborted || isAbortError(error)) {
+          return;
+        }
+
+        if (requestId !== jobsRequestIdRef.current) {
+          return;
+        }
+
         const message =
           error instanceof Error ? error.message : "Failed to load jobs";
-        toast.error(message);
+        setJobsError(message);
       } finally {
-        setIsLoadingJobs(false);
+        if (requestId === jobsRequestIdRef.current) {
+          setIsLoadingJobs(false);
+        }
       }
     },
-    [statusFilter, jobsMeta.limit]
+    [jobsMeta.limit, statusFilter]
   );
 
   useEffect(() => {
-    if (activeTab === "queue") {
-      fetchJobs(1);
+    if (activeTab !== "queue") {
+      return;
     }
-  }, [activeTab, statusFilter, fetchJobs]);
 
-  const totalPages = Math.max(1, Math.ceil(jobsMeta.total / jobsMeta.limit));
+    void fetchJobs(jobsPage);
+  }, [activeTab, fetchJobs, jobsPage]);
+
+  useEffect(() => {
+    return () => {
+      jobsAbortRef.current?.abort();
+    };
+  }, []);
+
+  const totalPages = jobsMeta.totalPages;
 
   const openReviewDialog = (job: IngestionJob) => {
     setReviewJob(job);
     setDialogOpen(true);
   };
+
+  const handleStatusFilterChange = (next: StatusFilter) => {
+    setStatusFilter(next);
+    setJobsPage(1);
+  };
+
+  const handleJobsRetry = () => {
+    void fetchJobs(jobsPage);
+  };
+
+  const handleActionComplete = async () => {
+    await fetchJobs(jobsPage);
+  };
+
+  if (user && !canAccess) {
+    return null;
+  }
 
   /* ----- Render ----- */
 
@@ -862,7 +1087,8 @@ export default function BookIngestionPage() {
                     key={item.key}
                     variant={statusFilter === item.key ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setStatusFilter(item.key)}
+                    disabled={isLoadingJobs}
+                    onClick={() => handleStatusFilterChange(item.key)}
                     className={
                       statusFilter === item.key
                         ? "bg-brand-navy text-xs text-white hover:bg-brand-navy/90"
@@ -873,6 +1099,20 @@ export default function BookIngestionPage() {
                   </Button>
                 ))}
               </div>
+
+              {jobsError && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2">
+                  <p className="text-[12px] text-destructive">{jobsError}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={handleJobsRetry}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
 
               {/* Jobs table */}
               {isLoadingJobs ? (
@@ -968,14 +1208,14 @@ export default function BookIngestionPage() {
                   {/* Pagination */}
                   <div className="flex items-center justify-between pt-2">
                     <p className="text-[11px] text-muted-foreground">
-                      Page {jobsMeta.page} of {totalPages}
+                      Page {jobsPage} of {totalPages}
                     </p>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={jobsMeta.page <= 1}
-                        onClick={() => fetchJobs(jobsMeta.page - 1)}
+                        disabled={isLoadingJobs || jobsPage <= 1}
+                        onClick={() => setJobsPage((prev) => prev - 1)}
                         className="text-xs"
                       >
                         <ChevronLeft className="mr-1 h-3.5 w-3.5" />
@@ -984,8 +1224,8 @@ export default function BookIngestionPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={jobsMeta.page >= totalPages}
-                        onClick={() => fetchJobs(jobsMeta.page + 1)}
+                        disabled={isLoadingJobs || jobsPage >= totalPages}
+                        onClick={() => setJobsPage((prev) => prev + 1)}
                         className="text-xs"
                       >
                         Next
@@ -1005,7 +1245,7 @@ export default function BookIngestionPage() {
         job={reviewJob}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onActionComplete={() => fetchJobs(jobsMeta.page)}
+        onActionComplete={handleActionComplete}
       />
     </div>
   );
