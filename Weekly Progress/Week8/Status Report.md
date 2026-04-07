@@ -2,7 +2,7 @@
 
 **Week 8 | April 1, 2026 - April 7, 2026**
 
-**Leader:** Marc Manoj
+**Leader:** Chimezie Nnawuihe
 ---
 
 | Name | Details |
@@ -81,7 +81,7 @@
 | | • Local readiness check required Postgres (Docker not running during verification) |
 ---
 
-**Total Time Spent:** 20+ hours (other team members to be added)
+**Total Time Spent:** 54 hours
 
 **Summary:**
 Week 8 focused on fixing critical catalog and map bugs. The book update flow (KAN-55) was verified as resolved on main, the map shelf viewer (KAN-57) was fixed to correctly handle the API response envelope unwrapping, and a shelf location dropdown (KAN-56) was added to the book edit form with full backend integration for shelf assignment. The shelf layout save failure was resolved by correcting hardcoded fallback node IDs to use the "new-" prefix convention the backend expects. Book deletion was fixed by adding cascading cleanup of dependent records in a transaction. The pageCount field was added to the Book model end-to-end (schema, migration, backend service, frontend API and transform). All changes were validated with TypeScript compilation and production builds across both repos.
