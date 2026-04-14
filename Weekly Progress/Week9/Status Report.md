@@ -61,7 +61,22 @@
 
 ---
 
-**Total Time Spent:** 20 hours
+| Name | Details |
+|------|---------|
+| **Kaelen Raible** | **Tasks completed:** |
+| | • Connected fines tab to live backend — replaced all local state mutations with real API calls  |
+| | • Connected transaction history tab to live backend — replaced in-memory client-side filtering with server-side paginated requests to GET /transactions (type, search, date range, page, limit forwarded as query params) |
+| | • Removed all fake local transaction log entries from checkout, check-in, and fine pay/waive actions — all history now sourced from the backend |
+| | • Added pagination to the fines tab with CirculationPagination component (previously fines had no pagination) |
+| | • Updated handlePayFine/handleWaiveFine in page.tsx to be async with try/catch error handling |
+| **Time Spent:** 4 hours | **Planned tasks for next week:** |
+| | • Monitor for edge cases in pagination/filtering behavior after real data volume increases |
+| | **Any issues or challenges:** |
+| | • None  |
+
+---
+
+**Total Time Spent:** 36 hours
 
 **Summary:**
 Week 9 focused on circulation workflow stability, API consistency, and fines/history persistence. Marc aligned loan APIs with frontend expectations for search and response payloads. Mirza implemented full fines and transaction history persistence (Task 3): Fine and TransactionLog Prisma models, REST endpoints for fetching/paying/waiving fines and querying transaction history, automatic fine creation on overdue checkin, automatic transaction logging on all circulation events, seed data with sample fines and transaction logs, and 15 new unit tests — all verified against the running server with proper error handling and standardized response envelopes.
