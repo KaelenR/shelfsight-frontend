@@ -42,6 +42,25 @@
 
 ---
 
+| Name | Details |
+|------|---------|
+| **Syed Hasan** | **Tasks completed:** |
+| | • Implemented email normalization (trim + lowercase) across authentication and user management to ensure consistent login behavior |
+| | • Updated authentication and user create/update flows to use normalized emails and prevent duplicates with proper 409 conflict handling |
+| | • Secured user API responses by removing sensitive fields (e.g., passwordHash) |
+| | • Added admin role management in the members workflow, enabling create/edit and role assignment (ADMIN, STAFF, PATRON) |
+| | • Integrated frontend members UI with backend APIs for user creation, editing, and role updates with proper loading and error handling |
+| | • Verified RBAC enforcement remains backend-authoritative (ADMIN-only user management) |
+| | • Completed full local end-to-end testing, confirming login normalization, duplicate prevention, role updates, and data persistence |
+| **Time Spent:** 12 hours | **Planned tasks for next week:** |
+| | • Support QA testing for user management workflows and monitor for edge cases or regressions |
+| | • Assist with integration of authentication and role management into upcoming multi-tenancy features |
+| | **Any issues or challenges:** |
+| | • Local setup required resolving Docker/database connectivity and port conflicts before migration and testing |
+| | • GitHub authentication initially blocked push operations; resolved via CLI login |
+
+---
+
 **Total Time Spent:** 20 hours
 
 **Summary:**
