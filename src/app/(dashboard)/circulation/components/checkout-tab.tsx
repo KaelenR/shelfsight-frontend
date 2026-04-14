@@ -25,6 +25,11 @@ import { useCheckoutCart } from "@/components/checkout-cart-provider";
 import type { CirculationMember, CirculationBook, CheckoutQueueItem } from "@/types/circulation";
 import { LOAN_PERIOD_OPTIONS } from "../constants";
 
+function toDateInputValue(date: Date): string {
+  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return adjusted.toISOString().slice(0, 10);
+}
+
 interface CheckoutTabProps {
   memberSearch: string;
   onMemberSearchChange: (v: string) => void;
@@ -34,6 +39,9 @@ interface CheckoutTabProps {
   bookSearch: string;
   onBookSearchChange: (v: string) => void;
   filteredBooks: CirculationBook[];
+  isBookSearchLoading: boolean;
+  isBookSearchPending: boolean;
+  bookSearchError: string | null;
   checkoutQueue: CheckoutQueueItem[];
   onAddToQueue: (b: CirculationBook & { bookCopyId?: string }) => void;
   onRemoveFromQueue: (bookId: string) => void;
@@ -52,6 +60,9 @@ export function CheckoutTab({
   bookSearch,
   onBookSearchChange,
   filteredBooks,
+  isBookSearchLoading,
+  isBookSearchPending,
+  bookSearchError,
   checkoutQueue,
   onAddToQueue,
   onRemoveFromQueue,
@@ -60,10 +71,11 @@ export function CheckoutTab({
   onLoanDaysChange,
   onProcessCheckout,
 }: CheckoutTabProps) {
-  const today = "2026-03-10";
+  const today = new Date();
+  const todayStr = toDateInputValue(today);
   const dueDate = new Date(today);
   dueDate.setDate(dueDate.getDate() + loanDays);
-  const dueDateStr = dueDate.toISOString().slice(0, 10);
+  const dueDateStr = toDateInputValue(dueDate);
 
   const memberAtLimit = selectedMember
     ? selectedMember.activeLoans >= selectedMember.maxLoans
@@ -286,7 +298,7 @@ export function CheckoutTab({
             <div className="relative shrink-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search book..."
+                placeholder="Search by title, author, or ISBN..."
                 value={bookSearch}
                 onChange={(e) => onBookSearchChange(e.target.value)}
                 className="pl-10"
@@ -295,7 +307,21 @@ export function CheckoutTab({
 
             {/* Book list — fills remaining space */}
             <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
-              {filteredBooks.map((book) => {
+              {(isBookSearchLoading || isBookSearchPending) && (
+                <div className="rounded-lg border border-brand-copper/20 bg-brand-copper/5 p-2.5">
+                  <p className="text-[11px] text-muted-foreground">
+                    Searching books by title, author, and ISBN...
+                  </p>
+                </div>
+              )}
+
+              {bookSearchError && (
+                <div className="rounded-lg border border-brand-brick/20 bg-brand-brick/8 p-2.5">
+                  <p className="text-[11px] text-brand-brick">{bookSearchError}</p>
+                </div>
+              )}
+
+              {!bookSearchError && filteredBooks.map((book) => {
                 const inQueue = checkoutQueue.some((q) => q.bookId === book.id);
                 return (
                   <button
@@ -347,6 +373,20 @@ export function CheckoutTab({
                   </button>
                 );
               })}
+
+              {!bookSearchError &&
+                !isBookSearchLoading &&
+                !isBookSearchPending &&
+                filteredBooks.length === 0 && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+                    <p className="text-[12px] font-medium text-muted-foreground">
+                      No books found
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70">
+                      Try a different title, author, or ISBN.
+                    </p>
+                  </div>
+                )}
             </div>
 
             {/* Queue — pinned at bottom */}
@@ -434,7 +474,7 @@ export function CheckoutTab({
               <Label className="text-[11px] text-muted-foreground">
                 Checkout Date
               </Label>
-              <Input type="date" value={today} readOnly className="mt-1" />
+              <Input type="date" value={todayStr} readOnly className="mt-1" />
             </div>
             <div>
               <Label className="text-[11px] text-muted-foreground">

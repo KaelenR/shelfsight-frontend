@@ -14,8 +14,17 @@ import {
 } from "lucide-react";
 import type { Loan } from "@/types/circulation";
 
+function formatDateForDisplay(dateValue: string): string {
+  const [year, month, day] = dateValue.split("-").map((part) => Number(part));
+  if (!year || !month || !day) {
+    return new Date(dateValue).toLocaleDateString();
+  }
+  return new Date(year, month - 1, day).toLocaleDateString();
+}
+
 interface CheckinTabProps {
   checkinSearch: string;
+  isCheckinSearchPending: boolean;
   onSearchChange: (query: string) => void;
   detectedLoan: Loan | null;
   getDaysOverdue: (dueDate: string) => number;
@@ -25,6 +34,7 @@ interface CheckinTabProps {
 
 export function CheckinTab({
   checkinSearch,
+  isCheckinSearchPending,
   onSearchChange,
   detectedLoan,
   getDaysOverdue,
@@ -45,7 +55,7 @@ export function CheckinTab({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Scan barcode or enter ISBN / book title..."
+              placeholder="Search by ISBN, title, or author..."
               value={checkinSearch}
               onChange={(e) => onSearchChange(e.target.value)}
               className="pl-10 h-11 text-[13px]"
@@ -94,7 +104,7 @@ export function CheckinTab({
                     Checked Out
                   </p>
                   <p className="text-[12px] font-medium">
-                    {new Date(detectedLoan.checkoutDate).toLocaleDateString()}
+                    {formatDateForDisplay(detectedLoan.checkoutDate)}
                   </p>
                 </div>
               </div>
@@ -105,7 +115,7 @@ export function CheckinTab({
                     Due Date
                   </p>
                   <p className="text-[12px] font-medium">
-                    {new Date(detectedLoan.dueDate).toLocaleDateString()}
+                    {formatDateForDisplay(detectedLoan.dueDate)}
                   </p>
                 </div>
               </div>
@@ -163,8 +173,18 @@ export function CheckinTab({
         </Card>
       )}
 
+      {checkinSearch && isCheckinSearchPending && (
+        <Card>
+          <CardContent className="py-6 text-center">
+            <p className="text-[12px] text-muted-foreground">
+              Searching active loans...
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Empty State */}
-      {checkinSearch && !detectedLoan && (
+      {checkinSearch && !isCheckinSearchPending && !detectedLoan && (
         <Card>
           <CardContent className="py-12 text-center">
             <BookOpen className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
@@ -172,7 +192,7 @@ export function CheckinTab({
               No active loan found
             </p>
             <p className="text-[11px] text-muted-foreground/60 mt-1">
-              Try searching by a different ISBN or book title
+              Try a different title, author, or ISBN
             </p>
           </CardContent>
         </Card>

@@ -156,6 +156,9 @@ export default function CirculationPage() {
             bookSearch={circ.bookSearch}
             onBookSearchChange={circ.setBookSearch}
             filteredBooks={circ.filteredBooks}
+            isBookSearchLoading={circ.isBookSearchLoading}
+            isBookSearchPending={circ.isBookSearchPending}
+            bookSearchError={circ.bookSearchError}
             checkoutQueue={circ.checkoutQueue}
             onAddToQueue={circ.addToQueue}
             onRemoveFromQueue={circ.removeFromQueue}
@@ -170,6 +173,7 @@ export default function CirculationPage() {
         <TabsContent value="checkin">
           <CheckinTab
             checkinSearch={circ.checkinSearch}
+            isCheckinSearchPending={circ.isCheckinSearchPending}
             onSearchChange={circ.searchForCheckin}
             detectedLoan={circ.detectedLoan}
             getDaysOverdue={circ.getDaysOverdue}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import type {
   CirculationMember,
@@ -22,6 +22,12 @@ import {
   MAX_FINE_PER_ITEM,
 } from "../constants";
 
+const SEARCH_DEBOUNCE_MS = 300;
+const BOOK_SEARCH_LIMIT = 100;
+const BOOK_BROWSE_LIMIT = 50;
+const LOAN_PAGE_LIMIT = 200;
+const UI_STATE_STORAGE_KEY = "shelfsight:circ-ui:v1";
+
 /* ── Backend response types ─────────────────────────────────────────── */
 
 interface BackendLoan {
@@ -30,7 +36,7 @@ interface BackendLoan {
   bookCopy: {
     id: string;
     barcode: string;
-    book: { id: string; title: string; author: string; isbn: string };
+    book: { id: string; title: string; author: string; isbn?: string | null };
   };
   checkedOutAt: string;
   dueDate: string;
@@ -75,15 +81,15 @@ function backendLoanToLoan(bl: BackendLoan): Loan {
   return {
     id: bl.id,
     bookId: bl.bookCopy.book.id,
-    bookTitle: bl.bookCopy.book.title,
-    bookISBN: bl.bookCopy.book.isbn,
-    bookAuthor: bl.bookCopy.book.author,
+    bookTitle: bl.bookCopy.book.title ?? "",
+    bookISBN: bl.bookCopy.book.isbn ?? "",
+    bookAuthor: bl.bookCopy.book.author ?? "",
     memberId: bl.user.id,
     memberName: bl.user.name,
     memberNumber: bl.user.email,
-    checkoutDate: new Date(bl.checkedOutAt).toISOString().slice(0, 10),
-    dueDate: new Date(bl.dueDate).toISOString().slice(0, 10),
-    returnDate: bl.returnedAt ? new Date(bl.returnedAt).toISOString().slice(0, 10) : null,
+    checkoutDate: toDateInputValue(new Date(bl.checkedOutAt)),
+    dueDate: toDateInputValue(new Date(bl.dueDate)),
+    returnDate: bl.returnedAt ? toDateInputValue(new Date(bl.returnedAt)) : null,
     status: bl.returnedAt ? "RETURNED" : overdue ? "OVERDUE" : "CHECKED_OUT",
     renewalCount: 0,
     maxRenewals: 2,
@@ -121,9 +127,102 @@ function backendBookToCircBook(b: BackendBook): CirculationBook {
 
 /* ── Overdue/fine utilities ─────────────────────────────────────────── */
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function toDateInputValue(date: Date): string {
+  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return adjusted.toISOString().slice(0, 10);
+}
+
+function parseDateOnly(dateValue: string): Date {
+  const [year, month, day] = dateValue.split("-").map((part) => Number(part));
+  if (!year || !month || !day) {
+    return new Date(dateValue);
+  }
+  return new Date(year, month - 1, day);
+}
+
+function normalizeQuery(query: string): string {
+  return query.trim().toLowerCase();
+}
+
+function normalizeForSearch(value: unknown): string {
+  return typeof value === "string" ? value.toLowerCase() : "";
+}
+
+function normalizeIsbn(value: string): string {
+  return value.replace(/[^0-9xX]/g, "").toLowerCase();
+}
+
+function isLikelyIsbnQuery(query: string): boolean {
+  const compact = normalizeIsbn(query);
+  return compact.length >= 8 && /\d/.test(compact);
+}
+
+function findBestCheckinLoan(loans: Loan[], query: string): Loan | null {
+  const q = normalizeQuery(query);
+  if (!q) return null;
+
+  const qIsbn = normalizeIsbn(q);
+  const candidates = loans.filter(
+    (loan) => loan.status === "CHECKED_OUT" || loan.status === "OVERDUE"
+  );
+
+  let best: { loan: Loan; score: number } | null = null;
+
+  for (const loan of candidates) {
+    const title = normalizeForSearch(loan.bookTitle);
+    const author = normalizeForSearch(loan.bookAuthor);
+    const isbn = normalizeForSearch(loan.bookISBN);
+    const normalizedLoanIsbn = normalizeIsbn(String(loan.bookISBN ?? ""));
+
+    let score = -1;
+
+    if (qIsbn.length > 0 && normalizedLoanIsbn.length > 0) {
+      if (normalizedLoanIsbn === qIsbn) {
+        score = Math.max(score, 100);
+      } else if (normalizedLoanIsbn.startsWith(qIsbn)) {
+        score = Math.max(score, 95);
+      } else if (normalizedLoanIsbn.includes(qIsbn)) {
+        score = Math.max(score, 90);
+      }
+    }
+
+    if (title === q) {
+      score = Math.max(score, 85);
+    } else if (title.startsWith(q)) {
+      score = Math.max(score, 80);
+    } else if (title.includes(q)) {
+      score = Math.max(score, 75);
+    }
+
+    if (author === q) {
+      score = Math.max(score, 70);
+    } else if (author.startsWith(q)) {
+      score = Math.max(score, 65);
+    } else if (author.includes(q)) {
+      score = Math.max(score, 60);
+    }
+
+    if (isbn.includes(q)) {
+      score = Math.max(score, 55);
+    }
+
+    if (score < 0) continue;
+
+    if (!best || score > best.score) {
+      best = { loan, score };
+    }
+  }
+
+  return best?.loan ?? null;
+}
+
 function getDaysOverdue(dueDate: string): number {
-  const today = new Date();
-  const due = new Date(dueDate);
+  const today = parseDateOnly(toDateInputValue(new Date()));
+  const due = parseDateOnly(dueDate);
   const diff = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
   return diff > 0 ? diff : 0;
 }
@@ -152,12 +251,17 @@ export function useCirculationState() {
   const [selectedMember, setSelectedMember] = useState<CirculationMember | null>(null);
   const [memberSearch, setMemberSearch] = useState("");
   const [bookSearch, setBookSearch] = useState("");
+  const [debouncedBookSearch, setDebouncedBookSearch] = useState("");
+  const [isBookSearchLoading, setIsBookSearchLoading] = useState(false);
+  const [bookSearchError, setBookSearchError] = useState<string | null>(null);
   const [checkoutQueue, setCheckoutQueue] = useState<CheckoutQueueItem[]>([]);
   const [loanDays, setLoanDays] = useState(DEFAULT_LOAN_DAYS);
 
   // ─── Check-in workflow ───────────────────────────────────
   const [checkinSearch, setCheckinSearch] = useState("");
+  const [debouncedCheckinSearch, setDebouncedCheckinSearch] = useState("");
   const [detectedLoan, setDetectedLoan] = useState<Loan | null>(null);
+  const [isCheckinLookupLoading, setIsCheckinLookupLoading] = useState(false);
 
   // ─── Active loans ────────────────────────────────────────
   const [loanFilters, setLoanFilters] = useState<LoanFilters>({ status: "all", search: "" });
@@ -186,11 +290,49 @@ export function useCirculationState() {
   const [isRenewOpen, setIsRenewOpen] = useState(false);
   const [checkinLoan, setCheckinLoan] = useState<Loan | null>(null);
   const [isCheckinConfirmOpen, setIsCheckinConfirmOpen] = useState(false);
+  const loansAbortRef = useRef<AbortController | null>(null);
+  const loansRequestIdRef = useRef(0);
+  const booksAbortRef = useRef<AbortController | null>(null);
+  const booksRequestIdRef = useRef(0);
+  const lastBooksQueryRef = useRef<string | null>(null);
+  const checkinIsbnAbortRef = useRef<AbortController | null>(null);
+  const checkinIsbnRequestIdRef = useRef(0);
+  const hasHydratedUiStateRef = useRef(false);
 
   // ─── Fetch loans from API ────────────────────────────────
   const fetchLoans = useCallback(async () => {
-    const result = await apiFetch<BackendLoansResponse>("/loans?status=active&limit=100");
-    setLoans(result.data.map(backendLoanToLoan));
+    const requestId = ++loansRequestIdRef.current;
+
+    loansAbortRef.current?.abort();
+    const controller = new AbortController();
+    loansAbortRef.current = controller;
+
+    try {
+      const allLoans: BackendLoan[] = [];
+      let page = 1;
+      let totalPages = 1;
+
+      do {
+        const result = await apiFetch<BackendLoansResponse>(
+          `/loans?status=active&page=${page}&limit=${LOAN_PAGE_LIMIT}`,
+          { signal: controller.signal }
+        );
+        allLoans.push(...result.data);
+        totalPages = Math.max(1, result.pagination.totalPages || 1);
+        page += 1;
+      } while (page <= totalPages);
+
+      if (controller.signal.aborted || requestId !== loansRequestIdRef.current) {
+        return;
+      }
+
+      setLoans(allLoans.map(backendLoanToLoan));
+    } catch (err) {
+      if (controller.signal.aborted || isAbortError(err)) {
+        return;
+      }
+      throw err;
+    }
   }, []);
 
   // ─── Fetch members from API ──────────────────────────────
@@ -230,17 +372,74 @@ export function useCirculationState() {
   }, []);
 
   // ─── Fetch books from API (for checkout search) ──────────
-  const fetchBooks = useCallback(async (search?: string) => {
-    const q = search ? `?search=${encodeURIComponent(search)}&limit=20` : "?limit=50";
-    const res = await apiFetch<BackendBooksResponse>(`/books${q}`);
-    setBooks(res.data.map(backendBookToCircBook));
-  }, []);
+  const fetchBooks = useCallback(
+    async (search = "", options?: { force?: boolean }) => {
+      const normalizedSearch = search.trim();
+
+      if (!options?.force && normalizedSearch === lastBooksQueryRef.current) {
+        return;
+      }
+
+      const requestId = ++booksRequestIdRef.current;
+
+      booksAbortRef.current?.abort();
+      const controller = new AbortController();
+      booksAbortRef.current = controller;
+
+      setIsBookSearchLoading(true);
+      setBookSearchError(null);
+
+      const params = new URLSearchParams({
+        limit: String(normalizedSearch ? BOOK_SEARCH_LIMIT : BOOK_BROWSE_LIMIT),
+      });
+
+      if (normalizedSearch) {
+        if (isLikelyIsbnQuery(normalizedSearch)) {
+          params.set("isbn", normalizedSearch);
+        } else {
+          params.set("search", normalizedSearch);
+        }
+      }
+
+      try {
+        const res = await apiFetch<BackendBooksResponse>(`/books?${params.toString()}`, {
+          signal: controller.signal,
+        });
+
+        if (controller.signal.aborted || requestId !== booksRequestIdRef.current) {
+          return;
+        }
+
+        setBooks(res.data.map(backendBookToCircBook));
+        lastBooksQueryRef.current = normalizedSearch;
+      } catch (err) {
+        if (controller.signal.aborted || isAbortError(err)) {
+          return;
+        }
+        if (requestId !== booksRequestIdRef.current) {
+          return;
+        }
+        const message = err instanceof Error ? err.message : "Failed to search books";
+        setBookSearchError(message);
+        throw err;
+      } finally {
+        if (requestId === booksRequestIdRef.current) {
+          setIsBookSearchLoading(false);
+        }
+      }
+    },
+    []
+  );
 
   // ─── Initial data load ──────────────────────────────────
   const reloadData = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
-    const results = await Promise.allSettled([fetchLoans(), fetchMembers(), fetchBooks()]);
+    const results = await Promise.allSettled([
+      fetchLoans(),
+      fetchMembers(),
+      fetchBooks("", { force: true }),
+    ]);
     const firstFailure = results.find((result) => result.status === "rejected");
     if (firstFailure && firstFailure.status === "rejected") {
       const reason = firstFailure.reason;
@@ -257,16 +456,140 @@ export function useCirculationState() {
 
   // ─── Debounced book search ───────────────────────────────
   useEffect(() => {
-    if (!bookSearch.trim()) return;
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.sessionStorage.getItem(UI_STATE_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as {
+        activeTab?: string;
+        bookSearch?: string;
+        checkinSearch?: string;
+      };
+
+      if (typeof parsed.activeTab === "string") {
+        setActiveTab(parsed.activeTab);
+      }
+      if (typeof parsed.bookSearch === "string") {
+        setBookSearch(parsed.bookSearch);
+      }
+      if (typeof parsed.checkinSearch === "string") {
+        setCheckinSearch(parsed.checkinSearch);
+      }
+    } catch {
+      // Ignore malformed persisted state.
+    } finally {
+      hasHydratedUiStateRef.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydratedUiStateRef.current || typeof window === "undefined") return;
+    const payload = { activeTab, bookSearch, checkinSearch };
+    window.sessionStorage.setItem(UI_STATE_STORAGE_KEY, JSON.stringify(payload));
+  }, [activeTab, bookSearch, checkinSearch]);
+
+  useEffect(() => {
     const t = setTimeout(() => {
-      fetchBooks(bookSearch.trim()).catch((err) => {
-        const message =
-          err instanceof Error ? err.message : "Failed to search books";
-        setLoadError(message);
-      });
-    }, 350);
+      setDebouncedBookSearch(bookSearch.trim());
+    }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
-  }, [bookSearch, fetchBooks]);
+  }, [bookSearch]);
+
+  useEffect(() => {
+    void fetchBooks(debouncedBookSearch).catch(() => {
+      // Search error state is set inside fetchBooks.
+    });
+  }, [debouncedBookSearch, fetchBooks]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedCheckinSearch(checkinSearch.trim());
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [checkinSearch]);
+
+  useEffect(() => {
+    if (!debouncedCheckinSearch) {
+      checkinIsbnAbortRef.current?.abort();
+      setIsCheckinLookupLoading(false);
+      setDetectedLoan(null);
+      return;
+    }
+
+    const localMatch = findBestCheckinLoan(loans, debouncedCheckinSearch);
+    if (localMatch) {
+      checkinIsbnAbortRef.current?.abort();
+      setIsCheckinLookupLoading(false);
+      setDetectedLoan(localMatch);
+      return;
+    }
+
+    if (!isLikelyIsbnQuery(debouncedCheckinSearch)) {
+      checkinIsbnAbortRef.current?.abort();
+      setIsCheckinLookupLoading(false);
+      setDetectedLoan(null);
+      return;
+    }
+
+    const requestId = ++checkinIsbnRequestIdRef.current;
+    checkinIsbnAbortRef.current?.abort();
+    const controller = new AbortController();
+    checkinIsbnAbortRef.current = controller;
+    setIsCheckinLookupLoading(true);
+
+    void apiFetch<BackendBooksResponse>(
+      `/books?isbn=${encodeURIComponent(debouncedCheckinSearch)}&limit=20`,
+      { signal: controller.signal }
+    )
+      .then((res) => {
+        if (controller.signal.aborted || requestId !== checkinIsbnRequestIdRef.current) {
+          return;
+        }
+
+        const booksById = new Map(res.data.map((book) => [book.id, book]));
+        const foundLoan = loans.find(
+          (loan) =>
+            (loan.status === "CHECKED_OUT" || loan.status === "OVERDUE") &&
+            booksById.has(loan.bookId)
+        );
+
+        if (!foundLoan) {
+          setDetectedLoan(null);
+          return;
+        }
+
+        const matchedBook = booksById.get(foundLoan.bookId);
+        if (matchedBook?.isbn && !foundLoan.bookISBN) {
+          setDetectedLoan({ ...foundLoan, bookISBN: matchedBook.isbn });
+          return;
+        }
+
+        setDetectedLoan(foundLoan);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted || isAbortError(err)) {
+          return;
+        }
+        if (requestId !== checkinIsbnRequestIdRef.current) {
+          return;
+        }
+        setDetectedLoan(null);
+      })
+      .finally(() => {
+        if (requestId === checkinIsbnRequestIdRef.current) {
+          setIsCheckinLookupLoading(false);
+        }
+      });
+  }, [loans, debouncedCheckinSearch]);
+
+  useEffect(() => {
+    return () => {
+      booksAbortRef.current?.abort();
+      loansAbortRef.current?.abort();
+      checkinIsbnAbortRef.current?.abort();
+    };
+  }, []);
 
   // ─── Computed: stats ─────────────────────────────────────
   const activeLoans = useMemo(
@@ -277,7 +600,7 @@ export function useCirculationState() {
     () => loans.filter((l) => l.status === "OVERDUE"),
     [loans]
   );
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toDateInputValue(new Date());
   const returnsTodayCount = useMemo(
     () => loans.filter((l) => l.returnDate === today).length,
     [loans, today]
@@ -298,15 +621,8 @@ export function useCirculationState() {
 
   // ─── Computed: filtered books ────────────────────────────
   const filteredBooks = useMemo(() => {
-    if (!bookSearch) return books;
-    const q = bookSearch.toLowerCase();
-    return books.filter(
-      (b) =>
-        b.title.toLowerCase().includes(q) ||
-        b.isbn.toLowerCase().includes(q) ||
-        b.author.toLowerCase().includes(q)
-    );
-  }, [books, bookSearch]);
+    return books;
+  }, [books]);
 
   // ─── Computed: active loans (filtered, sorted, paginated)
   const activeAndOverdueLoans = useMemo(
@@ -428,7 +744,7 @@ export function useCirculationState() {
           bookTitle: book.title,
           bookISBN: book.isbn,
           bookAuthor: book.author,
-          dueDate: dueDate.toISOString().slice(0, 10),
+          dueDate: toDateInputValue(dueDate),
           bookCopyId: book.bookCopyId,
         },
       ]);
@@ -485,7 +801,7 @@ export function useCirculationState() {
       setTransactionLog((prev) => [...newTransactions, ...prev]);
 
       // Refresh loans & books from API
-      await Promise.all([fetchLoans(), fetchBooks()]);
+      await Promise.all([fetchLoans(), fetchBooks("", { force: true })]);
 
       // Clear workflow
       setCheckoutQueue([]);
@@ -504,23 +820,8 @@ export function useCirculationState() {
   const searchForCheckin = useCallback(
     (query: string) => {
       setCheckinSearch(query);
-      if (!query.trim()) {
-        setDetectedLoan(null);
-        return;
-      }
-      const q = query.toLowerCase();
-      const found = loans.find(
-        (l) =>
-          (l.status === "CHECKED_OUT" || l.status === "OVERDUE") &&
-          (
-            l.bookISBN.toLowerCase().includes(q) ||
-            l.bookTitle.toLowerCase().includes(q) ||
-            l.bookAuthor.toLowerCase().includes(q)
-          )
-      );
-      setDetectedLoan(found ?? null);
     },
-    [loans]
+    []
   );
 
   const openCheckinConfirm = useCallback((loan: Loan) => {
@@ -576,7 +877,7 @@ export function useCirculationState() {
         ]);
 
         // Refresh from API
-        await Promise.all([fetchLoans(), fetchBooks()]);
+        await Promise.all([fetchLoans(), fetchBooks("", { force: true })]);
 
         // Clear check-in state
         setDetectedLoan(null);
@@ -602,9 +903,9 @@ export function useCirculationState() {
   const processRenewal = useCallback(
     (loan: Loan) => {
       // Renewal is local-only for now (no backend endpoint)
-      const newDueDate = new Date(loan.dueDate);
+      const newDueDate = parseDateOnly(loan.dueDate);
       newDueDate.setDate(newDueDate.getDate() + loanDays);
-      const newDueDateStr = newDueDate.toISOString().slice(0, 10);
+      const newDueDateStr = toDateInputValue(newDueDate);
 
       setLoans((prev) =>
         prev.map((l) =>
@@ -727,6 +1028,10 @@ export function useCirculationState() {
     setHistoryPage(1);
   }, []);
 
+  const isBookSearchPending = debouncedBookSearch !== bookSearch.trim();
+  const isCheckinSearchPending =
+    debouncedCheckinSearch !== checkinSearch.trim() || isCheckinLookupLoading;
+
   return {
     // Data
     loans,
@@ -754,6 +1059,9 @@ export function useCirculationState() {
     setMemberSearch,
     bookSearch,
     setBookSearch,
+    isBookSearchLoading,
+    isBookSearchPending,
+    bookSearchError,
     checkoutQueue,
     loanDays,
     setLoanDays,
@@ -766,6 +1074,7 @@ export function useCirculationState() {
 
     // Check-in workflow
     checkinSearch,
+    isCheckinSearchPending,
     searchForCheckin,
     detectedLoan,
     openCheckinConfirm,
