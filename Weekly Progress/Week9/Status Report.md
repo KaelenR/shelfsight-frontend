@@ -69,7 +69,7 @@
 | | • Removed all fake local transaction log entries from checkout, check-in, and fine pay/waive actions — all history now sourced from the backend |
 | | • Added pagination to the fines tab with CirculationPagination component (previously fines had no pagination) |
 | | • Updated handlePayFine/handleWaiveFine in page.tsx to be async with try/catch error handling |
-| **Time Spent:** 4 hours | **Planned tasks for next week:** |
+| **Time Spent:** 12 hours | **Planned tasks for next week:** |
 | | • Monitor for edge cases in pagination/filtering behavior after real data volume increases |
 | | **Any issues or challenges:** |
 | | • None  |
