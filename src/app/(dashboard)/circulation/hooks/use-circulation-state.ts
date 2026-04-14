@@ -30,7 +30,7 @@ interface BackendLoan {
   bookCopy: {
     id: string;
     barcode: string;
-    book: { id: string; title: string; author: string };
+    book: { id: string; title: string; author: string; isbn: string };
   };
   checkedOutAt: string;
   dueDate: string;
@@ -76,7 +76,7 @@ function backendLoanToLoan(bl: BackendLoan): Loan {
     id: bl.id,
     bookId: bl.bookCopy.book.id,
     bookTitle: bl.bookCopy.book.title,
-    bookISBN: bl.bookCopy.barcode,
+    bookISBN: bl.bookCopy.book.isbn,
     bookAuthor: bl.bookCopy.book.author,
     memberId: bl.user.id,
     memberName: bl.user.name,
@@ -231,7 +231,7 @@ export function useCirculationState() {
 
   // ─── Fetch books from API (for checkout search) ──────────
   const fetchBooks = useCallback(async (search?: string) => {
-    const q = search ? `?title=${encodeURIComponent(search)}&limit=20` : "?limit=50";
+    const q = search ? `?search=${encodeURIComponent(search)}&limit=20` : "?limit=50";
     const res = await apiFetch<BackendBooksResponse>(`/books${q}`);
     setBooks(res.data.map(backendBookToCircBook));
   }, []);
@@ -324,6 +324,7 @@ export function useCirculationState() {
       result = result.filter(
         (l) =>
           l.bookTitle.toLowerCase().includes(q) ||
+          l.bookAuthor.toLowerCase().includes(q) ||
           l.memberName.toLowerCase().includes(q) ||
           l.memberNumber.toLowerCase().includes(q) ||
           l.bookISBN.toLowerCase().includes(q)
@@ -452,7 +453,8 @@ export function useCirculationState() {
         let copyId = item.bookCopyId;
         if (!copyId) {
           // No direct copy ID — look it up from the books API
-          const res = await apiFetch<BackendBooksResponse>(`/books?title=${encodeURIComponent(item.bookTitle)}&limit=5`);
+          const fallbackSearch = item.bookISBN || item.bookTitle || item.bookAuthor;
+          const res = await apiFetch<BackendBooksResponse>(`/books?search=${encodeURIComponent(fallbackSearch)}&limit=5`);
           const book = res.data.find((b) => b.id === item.bookId);
           copyId = book?.availableCopyIds?.[0];
         }
@@ -510,7 +512,11 @@ export function useCirculationState() {
       const found = loans.find(
         (l) =>
           (l.status === "CHECKED_OUT" || l.status === "OVERDUE") &&
-          (l.bookISBN.toLowerCase().includes(q) || l.bookTitle.toLowerCase().includes(q))
+          (
+            l.bookISBN.toLowerCase().includes(q) ||
+            l.bookTitle.toLowerCase().includes(q) ||
+            l.bookAuthor.toLowerCase().includes(q)
+          )
       );
       setDetectedLoan(found ?? null);
     },
