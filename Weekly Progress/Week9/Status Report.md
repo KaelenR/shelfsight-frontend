@@ -76,7 +76,22 @@
 
 ---
 
-**Total Time Spent:** 36 hours
+| Name | Details |
+|------|---------|
+| **Chimezie Nnawuihe** | **Tasks completed:** |
+| | • Completed circulation checkout search improvements to support title, author, and ISBN flows using existing frontend/backend endpoints |
+| | • Implemented debouncing and request-control logic (cancel/stale-request protection) to reduce redundant API calls and keep results consistent while typing |
+| | • Stabilized check-in ISBN behavior with a fallback lookup path and improved loading, empty, and error states for more reliable UX across tab switching and refresh/reopen |
+| | • Improved resiliency of circulation search by adding safe handling for incomplete loan data fields to prevent errors |
+| **Time Spent:** 10 hours | **Planned tasks for next week:** |
+| | • Support and fix issues identified during testing across workflows |
+| | • Multi-Organization / Multi-Tenancy Support |
+| | **Any issues or challenges:** |
+| | • Inconsistent data caused check-in ISBN search failures and required fallback handling |
+
+---
+
+**Total Time Spent:** 54 hours
 
 **Summary:**
 Week 9 focused on circulation workflow stability, API consistency, and fines/history persistence. Marc aligned loan APIs with frontend expectations for search and response payloads. Mirza implemented full fines and transaction history persistence (Task 3): Fine and TransactionLog Prisma models, REST endpoints for fetching/paying/waiving fines and querying transaction history, automatic fine creation on overdue checkin, automatic transaction logging on all circulation events, seed data with sample fines and transaction logs, and 15 new unit tests — all verified against the running server with proper error handling and standardized response envelopes.
