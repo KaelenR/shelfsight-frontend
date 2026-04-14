@@ -34,8 +34,8 @@
 | | • Added 15 unit tests for fines and transactions services (fetchFines, payFine, waiveFine, createFineForLoan, fetchTransactions, createTransaction) |
 | | • All 19 backend tests passing, TypeScript compilation clean, API endpoints verified against running server |
 | **Time Spent:** 10 hours | **Planned tasks for next week:** |
-| | • Add backend renewal endpoint (POST /loans/:id/renew) — currently local-only in frontend with no persistence |
-| | • Support Task 4 (frontend integration) by resolving any API contract gaps that surface during fines/history UI hookup |
+| | • KAN-51: Audit Trail & Activity Log UI — build on the TransactionLog backend to surface a full activity log view |
+| | • KAN-48: Notifications System — implement due-date reminders and overdue alert logic using fines/loan data |
 | | **Any issues or challenges:** |
 | | • Docker daemon was not running initially, requiring restart before migration could be applied |
 | | • Seed data initially had no overdue returned loans (all returned early), needed to adjust return dates to generate fine records |
