@@ -34,8 +34,8 @@
 | | • Added 15 unit tests for fines and transactions services (fetchFines, payFine, waiveFine, createFineForLoan, fetchTransactions, createTransaction) |
 | | • All 19 backend tests passing, TypeScript compilation clean, API endpoints verified against running server |
 | **Time Spent:** 10 hours | **Planned tasks for next week:** |
-| | • Support Task 4 (frontend integration) by addressing any API contract issues that arise during UI hookup |
-| | • Monitor for regressions and expand test coverage for edge cases (e.g., concurrent pay/waive, bulk operations) |
+| | • Add backend renewal endpoint (POST /loans/:id/renew) — currently local-only in frontend with no persistence |
+| | • Support Task 4 (frontend integration) by resolving any API contract gaps that surface during fines/history UI hookup |
 | | **Any issues or challenges:** |
 | | • Docker daemon was not running initially, requiring restart before migration could be applied |
 | | • Seed data initially had no overdue returned loans (all returned early), needed to adjust return dates to generate fine records |
