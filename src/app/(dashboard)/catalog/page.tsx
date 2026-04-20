@@ -15,6 +15,7 @@ import { CatalogPagination } from "./components/catalog-pagination";
 import { BookDetailSheet } from "./components/book-detail-sheet";
 import { BookFormDialog } from "./components/book-form-dialog";
 import { DeleteConfirmDialog } from "./components/delete-confirm-dialog";
+import { BulkUploadDialog } from "./components/bulk-upload-dialog";
 import type { Book } from "@/types/book";
 
 export default function CatalogPage() {
@@ -25,6 +26,7 @@ export default function CatalogPage() {
   const [detailBook, setDetailBook] = useState<Book | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editBook, setEditBook] = useState<Book | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
@@ -39,6 +41,10 @@ export default function CatalogPage() {
   const handleAddBook = () => {
     setEditBook(null);
     setIsFormOpen(true);
+  };
+
+  const handleBulkUpload = () => {
+    setIsBulkUploadOpen(true);
   };
 
   const handleEditBook = (book: Book) => {
@@ -96,6 +102,7 @@ export default function CatalogPage() {
         totalResults={catalog.total}
         selectedCount={catalog.selectedIds.size}
         onAddBook={handleAddBook}
+        onBulkUpload={handleBulkUpload}
         onExport={handleExport}
         onBulkDelete={handleBulkDelete}
         onExportSelected={handleExportSelected}
@@ -198,6 +205,13 @@ export default function CatalogPage() {
         bulkDeleteIds={Array.from(catalog.selectedIds)}
         onSuccess={catalog.refreshBooks}
         onClearSelection={catalog.deselectAll}
+      />
+
+      {/* Bulk Upload Dialog */}
+      <BulkUploadDialog
+        open={isBulkUploadOpen}
+        onOpenChange={setIsBulkUploadOpen}
+        onSuccess={catalog.refreshBooks}
       />
     </div>
   );

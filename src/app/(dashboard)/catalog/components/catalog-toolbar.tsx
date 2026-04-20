@@ -46,6 +46,7 @@ interface CatalogToolbarProps {
   totalResults: number;
   selectedCount: number;
   onAddBook: () => void;
+  onBulkUpload?: () => void;
   onExport: () => void;
   onBulkDelete: () => void;
   onExportSelected: () => void;
@@ -66,6 +67,7 @@ export function CatalogToolbar({
   totalResults,
   selectedCount,
   onAddBook,
+  onBulkUpload,
   onExport,
   onBulkDelete,
   onExportSelected,
@@ -274,6 +276,18 @@ export function CatalogToolbar({
               <Download className="w-3.5 h-3.5 mr-1.5" />
               Export CSV
             </Button>
+
+            {canEdit && onBulkUpload && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8"
+                onClick={onBulkUpload}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Bulk Upload
+              </Button>
+            )}
 
             {canEdit && (
               <Button
