@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-import { apiFetch } from "@/lib/api";
+import { apiUpload } from "@/lib/api";
 
 interface BulkUploadDialogProps {
   open: boolean;
@@ -45,10 +45,8 @@ export function BulkUploadDialog({ open, onOpenChange, onSuccess }: BulkUploadDi
     formData.append("file", file);
 
     try {
-      const data = await apiFetch("/books/bulk-file", {
-        method: "POST",
-        body: formData,
-      }) as { successful?: number; failed?: number };
+      const response = await apiUpload("/books/bulk-file", formData) as any;
+      const data = response.data || response;
 
       setResult({
         successful: data.successful || 0,
