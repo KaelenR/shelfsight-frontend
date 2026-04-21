@@ -11,8 +11,8 @@
 | | • Implemented the bulk upload workflow. Built the backend functionality (`POST /books/bulk-file`) utilizing `multer` and `xlsx` to parse spreadsheet rows into recognizable library metadata directly from the frontend request. |
 | | • Developed a UI modal in the catalog dashboard that allows admin users to seamlessly attach and upload Excel `.xlsx` or `.csv` files. |
 | | • Engineered the backend ingestion service to properly validate ISBNs, titles, and authors across batches. Implemented database upsert logic to gracefully handle duplicate entries and failure recovery without breaking the entire upload transaction. |
-| | • Created a direct-to-database seeding script (`scripts/populate-db.ts`) utilizing `@faker-js/faker`. This bypasses HTTP limitations to generate and insert up to 100k+ realistic books and circulation copies, which is critical for stress-testing our search indexing and checkout flows. |
 | | • Authored `docs/task1/README.md` to document the bulk scale constraints, technical approaches, and execution strategies. |
+| | • Optimized the backend bulk insertion process to handle 10k+ rows by splitting the operations into batches of 500. Substituted individual transactions for 4 highly optimized SQL batch queries (`findMany` constraints, `createMany` records/copies, and arrayed `$transaction` upserts), which resolved a critical 2.5-minute timeout issue and reduced ingestion time to seconds. |
 | **Time Spent:** 10 hours | **Planned tasks for next week:** |
 | | • Support QA testing for bulk upload edge cases and monitor for catalog indexing regressions |
 | | • Assist with final project optimizations and multi-tenant handoff |
