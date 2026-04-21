@@ -43,12 +43,19 @@
 
 | Name | Details |
 |------|---------|
-| **Syed Hasan** | **Tasks completed:** |
-| | • To be added later |
-| **Time Spent:** 0 hours | **Planned tasks for next week:** |
-| | • To be added later |
+| **Syed Hasan** | **Tasks completed (Task 5 – CI/CD, Documentation & Release Readiness):** |
+| | • Led final release readiness efforts by consolidating CI/CD, deployment workflows, environment setup, and verification processes into a single launch-ready document. |
+| | • Authored the **CI/CD, Release Readiness & Verification Report**, integrating outputs from Task 3 (k6 load testing), Task 4 (E2E testing + bug fixes), and Task 5 (scalability optimizations) into a cohesive, manager-facing document. |
+| | • Documented complete **deployment flow**, including environment configuration (Docker Postgres, backend, frontend), local and CI build steps, and validation procedures. |
+| | • Defined and formalized **pre-release smoke test checklist**, ensuring all core product workflows (auth, catalog, circulation, ingestion, RBAC) are validated before launch. |
+| | • Established **rollback plan and failure response strategy**, including trigger conditions (auth failures, 5xx errors, broken workflows) and recovery steps. |
+| | • Consolidated and documented **known system limitations**, including ingestion constraints (no AWS/OpenAI live validation), partial endpoint availability, and dataset scaling gaps. |
+| | • Ensured all team contributions (Tasks 1–5) were captured, standardized, and aligned into a **single presentation-ready technical document** for final delivery. |
+| **Time Spent:** 10 hours | **Planned tasks for next week:** |
+| | • Execute final smoke validation on production-like environment |
+| | • Support presentation walkthrough and technical explanation of CI/CD and system readiness |
 | | **Any issues or challenges:** |
-| | • None reported yet |
+| | • Coordinating multiple task outputs (testing, scalability, ingestion, CI) into a single consistent document required aligning formats, terminology, and verification evidence across contributors |
 
 ---
 
