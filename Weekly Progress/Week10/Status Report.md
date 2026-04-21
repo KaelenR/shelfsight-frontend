@@ -2,70 +2,79 @@
 
 **Week 10 | April 15, 2026 - April 21, 2026**
 
-**Leader:** Chimezie Nnawuihe
+**Leader:** Syed Hasan
 ---
 
 | Name | Details |
 |------|---------|
 | **Marc Manoj** | **Tasks completed:** |
-| | â€¢ Implemented the bulk upload workflow. Built the backend functionality (`POST /books/bulk-file`) utilizing `multer` and `xlsx` to parse spreadsheet rows into recognizable library metadata directly from the frontend request. |
-| | â€¢ Developed a UI modal in the catalog dashboard that allows admin users to seamlessly attach and upload Excel `.xlsx` or `.csv` files. |
-| | â€¢ Engineered the backend ingestion service to properly validate ISBNs, titles, and authors across batches. Implemented database upsert logic to gracefully handle duplicate entries and failure recovery without breaking the entire upload transaction. |
-| | â€¢ Created a direct-to-database seeding script (`scripts/populate-db.ts`) utilizing `@faker-js/faker`. This bypasses HTTP limitations to generate and insert up to 100k+ realistic books and circulation copies, which is critical for stress-testing our search indexing and checkout flows. |
-| | â€¢ Authored `docs/task1/README.md` to document the bulk scale constraints, technical approaches, and execution strategies. |
+| | • Implemented the bulk upload workflow. Built the backend functionality (`POST /books/bulk-file`) utilizing `multer` and `xlsx` to parse spreadsheet rows into recognizable library metadata directly from the frontend request. |
+| | • Developed a UI modal in the catalog dashboard that allows admin users to seamlessly attach and upload Excel `.xlsx` or `.csv` files. |
+| | • Engineered the backend ingestion service to properly validate ISBNs, titles, and authors across batches. Implemented database upsert logic to gracefully handle duplicate entries and failure recovery without breaking the entire upload transaction. |
+| | • Created a direct-to-database seeding script (`scripts/populate-db.ts`) utilizing `@faker-js/faker`. This bypasses HTTP limitations to generate and insert up to 100k+ realistic books and circulation copies, which is critical for stress-testing our search indexing and checkout flows. |
+| | • Authored `docs/task1/README.md` to document the bulk scale constraints, technical approaches, and execution strategies. |
 | **Time Spent:** 10 hours | **Planned tasks for next week:** |
-| | â€¢ Support QA testing for bulk upload edge cases and monitor for catalog indexing regressions |
-| | â€¢ Assist with final project optimizations and multi-tenant handoff |
+| | • Support QA testing for bulk upload edge cases and monitor for catalog indexing regressions |
+| | • Assist with final project optimizations and multi-tenant handoff |
 | | **Any issues or challenges:** |
-| | â€¢ Resolving Typescript/NextJS build constraints surrounding FormData mapping off the backend required adjusting the payload logic between Next's Server Context and React Context |
+| | • Resolving Typescript/NextJS build constraints surrounding FormData mapping off the backend required adjusting the payload logic between Next's Server Context and React Context |
 
 ---
 
 | Name | Details |
 |------|---------|
-| **Mirza Baig** | **Tasks completed:** |
-| | â€¢ To be added later |
-| **Time Spent:** 0 hours | **Planned tasks for next week:** |
-| | â€¢ To be added later |
+| **Mirza Baig** | **Tasks completed (Task 4 – End-to-End Testing & Critical Bug Resolution):** |
+| | • Stood up the first Playwright E2E harness on the frontend repo — 8 specs covering auth, catalog CRUD, shelf assignment, search, map API, circulation, ingestion, RBAC, search debouncing, and input validation. Final run: **30 passed, 2 conditional skips, 0 failed** in ~20s. |
+| | • Added a backend `POST /__test__/reset` route (guarded by `NODE_ENV !== 'production'`) plus a Playwright `globalSetup` hook so every E2E run starts from a deterministic seeded DB state. |
+| | • Fixed **KAN-57** — standardized every `/map/*` controller response on the `{ success, data }` envelope so the API is consistent with the rest of the endpoints. |
+| | • Fixed **KAN-59** — added email-format and 8-char minimum-password validation to `users.service.ts` on both create and update paths; reuses the existing `AppError.fieldErrors` pattern and the `normalizeEmail` helper (no new dependency). |
+| | • Fixed **KAN-60** — added a heuristic Dewey classifier fallback and a `source: 'llm' \| 'heuristic' \| 'unavailable'` discriminator on `DeweyClassification` so the ingestion pipeline stops silently returning null results when `OPENAI_API_KEY` is missing. |
+| | • Wrote regression specs verifying **KAN-55** (book update persistence), **KAN-56** (shelf dropdown), **KAN-58** (catalog search), **KAN-61** (search debouncing) — all previously fixed by teammates, now covered by automated tests. |
+| | • Authored two launch-ready docs: [`docs/task4-testing-report.md`](../../docs/task4-testing-report.md) (narrative summary, per-ticket status, known limitations) and [`docs/task4-test-results.md`](../../docs/task4-test-results.md) (per-test timings, full backend vitest output, verification matrix). Both feed directly into Task 5's launch documentation. |
+| | • Closed **15 Jira tickets** with evidence-backed comments: KAN-55, 56, 57, 58, 59, 60, 61 (Task 4 scope) plus KAN-4, 5, 6, 7, 8 (historical epics with all children Done) and KAN-65, 68, 70 (CI/CD, pagination cap, rate limiting — verified in teammates' recent commits). |
+| **Time Spent:** 10 hours | **Planned tasks for next week:** |
+| | • **KAN-45 — Multi-Organization / Multi-Tenancy Support (Highest).** Schema-level `Organization` model + `organizationId` FK on User, Book, ShelfSection, IngestionJob. Update JWT payload to carry `organizationId`; add a `requireOrg` middleware wrapper that auto-scopes Prisma queries so data cannot leak between orgs. Frontend AuthProvider exposes current org; add org-scoped sign-up / invite flow. Row-level isolation over schema-per-tenant for MVP. |
 | | **Any issues or challenges:** |
-| | â€¢ None reported yet |
+| | • Next.js 16 Turbopack OOMed repeatedly while compiling the dashboard routes during E2E runs on Node 23; worked around it by forcing the `webpack` dev compiler in the Playwright webServer config with `NODE_OPTIONS=--max-old-space-size=8192`. Documented in the testing report. |
+| | • A stray `package-lock.json` in the home directory tricked Turbopack into picking the wrong workspace root, so every route rendered the `not-found` fallback. Fixed by anchoring `turbopack.root` in `next.config.ts`. |
+| | • Local Postgres maps to host port **5433** (per `docker-compose.yml`), but the checked-in `.env.example` still shows `5432`. Minor but tripped me up early; flagged in the known-limitations section of the testing report for the next person who spins up the stack. |
 
 ---
 
 | Name | Details |
 |------|---------|
 | **Syed Hasan** | **Tasks completed:** |
-| | â€¢ To be added later |
+| | • To be added later |
 | **Time Spent:** 0 hours | **Planned tasks for next week:** |
-| | â€¢ To be added later |
+| | • To be added later |
 | | **Any issues or challenges:** |
-| | â€¢ None reported yet |
+| | • None reported yet |
 
 ---
 
 | Name | Details |
 |------|---------|
 | **Kaelen Raible** | **Tasks completed:** |
-| | â€¢ To be added later |
+| | • To be added later |
 | **Time Spent:** 0 hours | **Planned tasks for next week:** |
-| | â€¢ To be added later |
+| | • To be added later |
 | | **Any issues or challenges:** |
-| | â€¢ None reported yet |
+| | • None reported yet |
 
 ---
 
 | Name | Details |
 |------|---------|
 | **Chimezie Nnawuihe** | **Tasks completed:** |
-| | â€¢ To be added later |
+| | • To be added later |
 | **Time Spent:** 0 hours | **Planned tasks for next week:** |
-| | â€¢ To be added later |
+| | • To be added later |
 | | **Any issues or challenges:** |
-| | â€¢ None reported yet |
+| | • None reported yet |
 
 ---
 
-**Total Time Spent:** 10 hours
+**Total Time Spent:** 20 hours
 
 **Summary:**
-Week 10 focused primarily on the introduction of bulk upload capabilities and massive data population scaling protocols. Marc implemented a high-volume data ingestion pipeline that parses uploaded Excel/.csv workbooks into the backend database with built-in upsert redundancy. This was validated alongside an offline data population script using Faker representation capable of rapidly seeding 100,000+ randomized records directly into Postgres, which effectively hardens our database indexes, searching components, and circulation checkouts. Team summary sections for Mirza, Syed, Kaelen, and Chimezie will be detailed later.
+Week 10 focused primarily on the introduction of bulk upload capabilities and massive data population scaling protocols. Marc implemented a high-volume data ingestion pipeline that parses uploaded Excel/.csv workbooks into the backend database with built-in upsert redundancy. This was validated alongside an offline data population script using Faker representation capable of rapidly seeding 100,000+ randomized records directly into Postgres, which effectively hardens our database indexes, searching components, and circulation checkouts. Mirza closed out Task 4 by standing up the project's first Playwright E2E suite (30 passing, 0 failing) and shipping fixes for the three remaining critical bugs (KAN-57, KAN-59, KAN-60), while verifying the teammate-delivered fixes for KAN-55/56/58/61 with automated regression specs — all seven Task 4 Jira tickets are now closed, with a detailed testing report and results log staged for Task 5's launch documentation. Team summary sections for Syed, Kaelen, and Chimezie will be detailed later.
