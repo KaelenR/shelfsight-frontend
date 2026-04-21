@@ -14,7 +14,7 @@
 | | • Authored `docs/task1/README.md` to document the bulk scale constraints, technical approaches, and execution strategies. |
 | | • Optimized the backend bulk insertion process to handle 10k+ rows by splitting the operations into batches of 500. Substituted individual transactions for 4 highly optimized SQL batch queries (`findMany` constraints, `createMany` records/copies, and arrayed `$transaction` upserts), which resolved a critical 2.5-minute timeout issue and reduced ingestion time to seconds. |
 | **Time Spent:** 10 hours | **Planned tasks for next week:** |
-| | • Support QA testing for bulk upload edge cases and monitor for catalog indexing regressions |
+| | • figure out why 5k works and 10k doesnt and fix it|
 | | • Assist with final project optimizations and multi-tenant handoff |
 | | **Any issues or challenges:** |
 | | • Resolving Typescript/NextJS build constraints surrounding FormData mapping off the backend required adjusting the payload logic between Next's Server Context and React Context |
