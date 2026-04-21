@@ -54,12 +54,21 @@
 
 | Name | Details |
 |------|---------|
-| **Kaelen Raible** | **Tasks completed:** |
-| | • To be added later |
-| **Time Spent:** 0 hours | **Planned tasks for next week:** |
-| | • To be added later |
+| **Kaelen Raible** | **Tasks completed (Task 5 – Scalability & Query Optimization):** |
+| | • Added GIN trigram indexes (`pg_trgm`) on text search columns and B-tree indexes on `Book.genre` / `ShelfSection.floor` via a new Prisma migration. |
+| | • Pushed book status filter from in-memory JS into a Prisma SQL `WHERE` clause; removed over-fetching on `/auth/me` (dropped loans join). |
+| | • Added server-side pagination to `GET /users` (max 100) and updated all frontend call sites to the new `{ data, pagination }` shape. |
+| | • Enforced `MAX_LIMIT=100` with enum allowlists across all paginated controllers (books, loans, fines, transactions). |
+| | • Added `express-rate-limit` (global: 300 req/15 min; auth: 15 req/15 min), gated to production only. |
+| | • Eliminated the on-mount `limit=9999` catalog fetch; export is now on-demand. Reduced dashboard/reports limits from 500–2000 to 100. |
+| | • Replaced sequential loans pagination loop with `Promise.all`; converted fines tab to server-side filtering. |
+| | • Added optional `?floor=N` filter and 500-row cap to `GET /map`. |
+| | • Documented all changes in `docs/task5/SCALABILITY.md`. |
+| **Time Spent:** 12 hours | **Planned tasks for next week:** |
+| | • Deploy migration and re-run k6 suite to compare p95 latencies against Task 3 baseline. |
 | | **Any issues or challenges:** |
-| | • None reported yet |
+| | • Local Docker DB was not running; migration validated via schema checks only, pending deployment. |
+| | • Rate limiter caused 100% k6 failures until gated behind `NODE_ENV === 'production'`. |
 
 ---
 
