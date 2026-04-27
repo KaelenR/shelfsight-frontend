@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-import { apiUpload } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
+import * as xlsx from "xlsx";
+import Papa from "papaparse";
 
 interface BulkUploadDialogProps {
   open: boolean;
@@ -17,9 +19,12 @@ interface BulkUploadDialogProps {
   onSuccess: () => void;
 }
 
+const CHUNK_SIZE = 1000;
+
 export function BulkUploadDialog({ open, onOpenChange, onSuccess }: BulkUploadDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [progressMsg, setProgressMsg] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ successful: number; failed: number } | null>(null);
 
@@ -28,7 +33,54 @@ export function BulkUploadDialog({ open, onOpenChange, onSuccess }: BulkUploadDi
       setFile(e.target.files[0]);
       setError("");
       setResult(null);
+      setProgressMsg("");
     }
+  };
+
+  const parseFileAndMap = async (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      const isCsv = file.name.toLowerCase().endsWith('.csv');
+      
+      const mapItem = (row: any) => ({
+        ...row,
+        title: row.title || row.Title,
+        author: row.author || row.Author,
+        isbn: row.isbn || row.ISBN || row['ISBN-13'],
+        genre: row.genre || row.Genre || row.Category || row.category,
+        deweyDecimal: row.deweyDecimal || row.DeweyDecimal || row['Dewey Decimal'],
+        language: row.language || row.Language,
+        publishYear: row.publishYear || row.PublishYear || row.PublicationYear || row['Publication Year'] || row.publishDate || row.PublishDate || row['Publication Date'],
+        pageCount: row.pageCount || row.PageCount || row['Page Count'],
+        copies: row.copies || row.Copies || row['Total Copies'] || row['Available Copies'] || 1,
+        status: row.status || row.Status,
+      });
+
+      if (isCsv) {
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            resolve(results.data.map(mapItem));
+          },
+          error: (err: any) => reject(new Error(err.message))
+        });
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = xlsx.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const rawItems = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+            resolve(rawItems.map(mapItem));
+          } catch (err: any) {
+            reject(new Error('Failed to parse Excel file'));
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsArrayBuffer(file);
+      }
+    });
   };
 
   const handleUpload = async () => {
@@ -40,20 +92,50 @@ export function BulkUploadDialog({ open, onOpenChange, onSuccess }: BulkUploadDi
     setLoading(true);
     setError("");
     setResult(null);
-
-    const formData = new FormData();
-    formData.append("file", file);
+    setProgressMsg("Parsing file...");
 
     try {
-      const response = await apiUpload("/books/bulk-file", formData) as any;
-      const data = response.data || response;
+      const items = await parseFileAndMap(file);
+      
+      if (items.length === 0) {
+        throw new Error("The file is empty or could not be parsed.");
+      }
 
+      let totalSuccess = 0;
+      let totalFailed = 0;
+      const chunks = [];
+      
+      for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+        chunks.push(items.slice(i, i + CHUNK_SIZE));
+      }
+
+      for (let i = 0; i < chunks.length; i++) {
+        setProgressMsg(`Uploading batch ${i + 1} of ${chunks.length}...`);
+        const chunk = chunks[i];
+        
+        try {
+          const response = await apiFetch("/books/bulk", {
+            method: 'POST',
+            body: chunk
+          }) as any;
+          
+          totalSuccess += response?.successful || 0;
+          totalFailed += response?.failed || 0;
+        } catch (err: any) {
+          // If a chunk fails entirely (e.g. 500 error), tally the whole chunk as failed
+          totalFailed += chunk.length;
+          console.error(`Chunk ${i+1} failed:`, err);
+        }
+      }
+
+      setProgressMsg("");
       setResult({
-        successful: data.successful || 0,
-        failed: data.failed || 0,
+        successful: totalSuccess,
+        failed: totalFailed,
       });
       onSuccess();
     } catch (err: unknown) {
+      setProgressMsg("");
       setError(err instanceof Error ? err.message : "An unexpected error occurred during upload.");
     } finally {
       setLoading(false);
@@ -67,6 +149,7 @@ export function BulkUploadDialog({ open, onOpenChange, onSuccess }: BulkUploadDi
         setFile(null);
         setResult(null);
         setError("");
+        setProgressMsg("");
       }
     }}>
       <DialogContent className="sm:max-w-[425px]">
@@ -92,6 +175,16 @@ export function BulkUploadDialog({ open, onOpenChange, onSuccess }: BulkUploadDi
             <Alert variant="destructive">
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {progressMsg && (
+            <Alert className="bg-blue-50 text-blue-900 border-blue-200">
+              <AlertTitle className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                Working...
+              </AlertTitle>
+              <AlertDescription>{progressMsg}</AlertDescription>
             </Alert>
           )}
 
