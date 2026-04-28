@@ -43,19 +43,18 @@
 
 | Name | Details |
 |------|---------|
-| **Syed Hasan** | **Tasks completed (Task 5 – CI/CD, Documentation & Release Readiness):** |
-| | • Led final release readiness efforts by consolidating CI/CD, deployment workflows, environment setup, and verification processes into a single launch-ready document. |
-| | • Authored the **CI/CD, Release Readiness & Verification Report**, integrating outputs from Task 3 (k6 load testing), Task 4 (E2E testing + bug fixes), and Task 5 (scalability optimizations) into a cohesive, manager-facing document. |
-| | • Documented complete **deployment flow**, including environment configuration (Docker Postgres, backend, frontend), local and CI build steps, and validation procedures. |
-| | • Defined and formalized **pre-release smoke test checklist**, ensuring all core product workflows (auth, catalog, circulation, ingestion, RBAC) are validated before launch. |
-| | • Established **rollback plan and failure response strategy**, including trigger conditions (auth failures, 5xx errors, broken workflows) and recovery steps. |
-| | • Consolidated and documented **known system limitations**, including ingestion constraints (no AWS/OpenAI live validation), partial endpoint availability, and dataset scaling gaps. |
-| | • Ensured all team contributions (Tasks 1–5) were captured, standardized, and aligned into a **single presentation-ready technical document** for final delivery. |
+| **Syed Hasan** | **Tasks completed (Task 5 – Final Report, Analytics & Submission Readiness):** |
+| | • Finalized the comprehensive **project report**, consolidating CI/CD pipelines, testing results (k6 + Playwright), scalability improvements, and system limitations into a single structured deliverable. |
+| | • Integrated outputs from all prior tasks (bulk upload scaling, load testing, security, and testing) into a cohesive, presentation-ready narrative aligned with project requirements. |
+| | • Added **basic analytics features**, including catalog usage insights and circulation trend tracking to strengthen product value and demonstrate real-world applicability. |
+| | • Organized all **project artifacts** (weekly reports, MOMs, GitHub repositories, documentation, and demo assets) to ensure completeness and submission readiness. |
+| | • Prepared **final presentation materials**, including system walkthrough, architecture explanation, and key performance highlights (latency, throughput, and reliability metrics). |
+| | • Reviewed and validated all **core system flows** (auth, catalog, search, circulation, ingestion, RBAC) in a production-like setup to ensure end-to-end readiness. |
 | **Time Spent:** 10 hours | **Planned tasks for next week:** |
-| | • Execute final smoke validation on production-like environment |
-| | • Support presentation walkthrough and technical explanation of CI/CD and system readiness |
+| | • Deliver final presentation and walkthrough |
+| | • Support any last-minute fixes or clarifications during evaluation |
 | | **Any issues or challenges:** |
-| | • Coordinating multiple task outputs (testing, scalability, ingestion, CI) into a single consistent document required aligning formats, terminology, and verification evidence across contributors |
+| | • Ensuring consistency across multiple documents and aligning technical outputs from different tasks into one unified report required careful consolidation and validation |
 
 ---
 
@@ -94,7 +93,7 @@
 
 ---
 
-**Total Time Spent:** 54 hours
+**Total Time Spent:** 50 hours
 
 **Summary:**
-Week 10 focused on transitioning ShelfSight into a fully release-ready, end-to-end system by combining large-scale data ingestion, comprehensive workflow validation, performance testing, and deployment readiness. Bulk upload functionality was introduced to support CSV/XLSX imports with validation and upsert handling, alongside a Faker-based seeding script capable of generating 100,000+ records for realistic stress testing. A complete end-to-end testing suite was implemented covering authentication, catalog, circulation, ingestion, RBAC, and search, achieving 30 passing tests with 0 failures and resolving all remaining critical bugs while verifying previously fixed issues. System scalability was strengthened through database indexing, pagination enforcement, rate limiting, and query optimizations, reducing over-fetching and improving backend efficiency. Load testing validated stability under 45 concurrent users and 9,000+ requests with a 0% failure rate, confirming reliability across core workflows. All results were consolidated into a comprehensive CI/CD and release readiness document, including environment setup, deployment steps, smoke tests, rollback planning, and known limitations, resulting in a polished, manager-ready deliverable that positions ShelfSight as a validated pre-launch candidate ready for presentation.
+Week 11 focused on finalizing ShelfSight as a scalable, secure, and production-ready system by addressing high-impact engineering priorities across data handling, architecture, and validation. Bulk upload scaling was improved through batching and optimized database operations, enabling reliable ingestion of 10k+ records while maintaining system stability across catalog, search, and circulation workflows. Multi-tenancy (KAN-45) was introduced to support organization-level data isolation, including schema updates, JWT enhancements, and middleware-based query scoping, alongside frontend support for organization context and onboarding flows. Security and deployment readiness were strengthened through server-side authentication enforcement, RBAC validation, environment configuration checks, and resolution of framework-level issues, followed by production-like smoke testing. Load testing efforts were expanded beyond the initial 45-user baseline, increasing concurrency and analyzing performance metrics such as p95 latency and failure rates to identify bottlenecks and validate system stability under heavier load. Finally, all workstreams were consolidated into a comprehensive project report covering CI/CD, testing, scalability, and limitations, with the addition of basic analytics (catalog usage and circulation trends) and full organization of documentation and demo assets, resulting in a complete, presentation-ready submission.
