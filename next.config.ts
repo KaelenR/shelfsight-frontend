@@ -14,8 +14,10 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve("."),
   },
-  serverActions: {
-    bodySizeLimit: "50mb",
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "50mb",
+    },
   },
   async rewrites() {
     return [
